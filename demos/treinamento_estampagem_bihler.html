@@ -1,0 +1,2107 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Treinamento Técnico: Estampagem, Cinemática Bihler &amp; Física do Corte</title>
+    <script>
+        (function() {
+            const savedTheme = localStorage.getItem('rv_theme') || 'dark';
+            document.documentElement.setAttribute('data-theme', savedTheme);
+        })();
+    </script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'system-ui', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    },
+                    colors: {
+                        cae: {
+                            bg: 'var(--cae-bg)',
+                            surface: 'var(--cae-surface)',
+                            text: 'var(--cae-text)',
+                            muted: 'var(--cae-muted)',
+                            teal: 'var(--cae-teal)',
+                            amber: 'var(--cae-amber)',
+                            danger: 'var(--cae-danger)',
+                            border: 'var(--cae-border)'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        /* Paleta 2: CAE / von Mises Spectrum */
+        :root, [data-theme="dark"] {
+            --cae-bg: #090E17;
+            --cae-surface: #131E31;
+            --cae-panel-bg: rgba(19, 30, 49, 0.88);
+            --cae-text: #F8FAFC;
+            --cae-muted: #94A3B8;
+            --cae-primary: #14B8A6;
+            --cae-teal: #2DD4BF;
+            --cae-amber: #F59E0B;
+            --cae-danger: #EF4444;
+            --cae-border: rgba(148, 163, 184, 0.16);
+            --cae-grid: rgba(148, 163, 184, 0.12);
+            --cae-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.72);
+            --cae-slider-grad-start: #14B8A6;
+            --cae-slider-grad-end: #F59E0B;
+        }
+
+        [data-theme="light"] {
+            --cae-bg: #F6F7F9;
+            --cae-surface: #FFFFFF;
+            --cae-panel-bg: rgba(255, 255, 255, 0.94);
+            --cae-text: #0F172A;
+            --cae-muted: #64748B;
+            --cae-primary: #0F3D5E;
+            --cae-teal: #0D9488;
+            --cae-amber: #D97706;
+            --cae-danger: #DC2626;
+            --cae-border: rgba(15, 23, 42, 0.14);
+            --cae-grid: rgba(15, 23, 42, 0.10);
+            --cae-shadow: 0 12px 32px -8px rgba(15, 23, 42, 0.09);
+            --cae-slider-grad-start: #0F3D5E;
+            --cae-slider-grad-end: #0D9488;
+        }
+
+        body {
+            background-color: var(--cae-bg);
+            color: var(--cae-text);
+            background-image: radial-gradient(circle at top right, rgba(20, 184, 166, 0.07), transparent 40%),
+                              radial-gradient(circle at bottom left, rgba(245, 158, 11, 0.05), transparent 40%);
+            overflow-x: hidden;
+            transition: background-color 0.25s ease, color 0.25s ease;
+        }
+
+        .glass-panel {
+            background: var(--cae-panel-bg);
+            backdrop-filter: blur(12px);
+            border: 1px solid var(--cae-border);
+            box-shadow: var(--cae-shadow);
+            border-radius: 16px;
+        }
+
+        .hmi-slider-container { position: relative; padding: 6px 0; }
+        input[type=range] {
+            -webkit-appearance: none; width: 100%; background: transparent; position: relative; z-index: 5;
+        }
+        input[type=range]:focus { outline: none; }
+        input[type=range]:focus-visible::-webkit-slider-thumb {
+            box-shadow: 0 0 0 3px var(--cae-surface), 0 0 0 6px var(--cae-amber);
+        }
+        input[type=range]::-webkit-slider-runnable-track {
+            width: 100%; height: 6px; cursor: pointer; background: var(--cae-border); border-radius: 3px;
+        }
+        input[type=range]::-webkit-slider-thumb {
+            height: 18px; width: 18px; border-radius: 50%; background: var(--cae-surface); cursor: pointer;
+            -webkit-appearance: none; margin-top: -6px;
+            box-shadow: 0 0 8px rgba(0, 0, 0, 0.35), 0 0 0 3px var(--cae-surface), 0 0 0 4px var(--cae-teal);
+            transition: transform 0.2s ease;
+        }
+        input[type=range]::-webkit-slider-thumb:hover { transform: scale(1.15); }
+        .slider-fill {
+            position: absolute; top: 12px; left: 0; height: 6px;
+            background: linear-gradient(90deg, var(--cae-slider-grad-start), var(--cae-slider-grad-end));
+            border-radius: 3px; pointer-events: none; transition: width 0.08s linear;
+        }
+
+        .tab-btn.active {
+            background: var(--cae-surface);
+            border-color: var(--cae-teal);
+            color: var(--cae-teal);
+            font-weight: 700;
+        }
+    </style>
+</head>
+<body class="min-h-screen p-3 md:p-5 flex flex-col font-sans">
+
+    <!-- HEADER & NAVEGAÇÃO -->
+    <header class="glass-panel px-5 py-3 mb-4 flex flex-wrap justify-between items-center gap-3">
+        <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-lg bg-cae-surface border border-cae-border flex items-center justify-center shadow-lg relative overflow-hidden">
+                <div class="absolute inset-0 bg-cae-teal/20"></div>
+                <svg class="w-5 h-5 text-cae-teal relative z-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path>
+                </svg>
+            </div>
+            <div>
+                <h1 class="text-base md:text-lg font-extrabold tracking-tight text-cae-text">
+                    TREINAMENTO TÉCNICO: <span class="text-cae-teal">ESTAMPAGEM &amp; FÍSICA DO CORTE</span>
+                </h1>
+                <p class="text-[11px] font-mono text-cae-muted uppercase tracking-wider">
+                    Padrões Bihler • Cinemática Excêntrica • Escalonamento de Punções &amp; Trava-Cavaco
+                </p>
+            </div>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-2">
+            <!-- SELETOR DE MÓDULOS DO TREINAMENTO -->
+            <div class="flex bg-cae-bg border border-cae-border rounded-lg p-1 text-xs font-mono">
+                <button type="button" id="tabModule1" class="tab-btn active px-3 py-1.5 rounded border border-transparent transition">
+                    1. Cinemática Bihler &amp; Força
+                </button>
+                <button type="button" id="tabModule2" class="tab-btn px-3 py-1.5 rounded border border-transparent text-cae-muted hover:text-cae-text transition">
+                    2. Escalonamento &amp; Ângulos
+                </button>
+                <button type="button" id="tabModule3" class="tab-btn px-3 py-1.5 rounded border border-transparent text-cae-muted hover:text-cae-text transition">
+                    3. Física do Corte &amp; Trava-Cavaco
+                </button>
+            </div>
+
+            <a href="../index.html#cases" class="px-3 py-1.5 rounded-full bg-cae-surface border border-cae-border text-xs font-mono font-bold text-cae-muted hover:text-cae-teal hover:border-cae-teal transition">
+                &larr; Portfólio
+            </a>
+            <button id="themeToggle" type="button" aria-label="Alternar tema Claro e Escuro" class="flex items-center gap-2 px-3 py-1.5 rounded-full bg-cae-surface border border-cae-border text-xs font-mono font-bold text-cae-text hover:border-cae-teal transition">
+                <svg id="sunIcon" class="w-4 h-4 hidden text-cae-amber" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="5" stroke-width="2"/><line x1="12" y1="1" x2="12" y2="3" stroke-width="2"/><line x1="12" y1="21" x2="12" y2="23" stroke-width="2"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64" stroke-width="2"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78" stroke-width="2"/><line x1="1" y1="12" x2="3" y2="12" stroke-width="2"/><line x1="21" y1="12" x2="23" y2="12" stroke-width="2"/></svg>
+                <svg id="moonIcon" class="w-4 h-4 text-cae-teal" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg>
+                <span id="themeText">Tema</span>
+            </button>
+        </div>
+    </header>
+
+    <!-- KPIS TÉCNICOS RÁPIDOS NO TOPO -->
+    <section class="grid grid-cols-2 md:grid-cols-4 gap-3.5 mb-4">
+        <div class="glass-panel p-3.5 flex flex-col justify-between">
+            <span class="text-[10px] font-mono text-cae-muted uppercase font-bold">Penetração na Matriz (Bihler)</span>
+            <div class="mt-1">
+                <div class="flex items-baseline gap-1.5">
+                    <span id="kpiPenetration" class="text-2xl font-mono font-extrabold text-cae-teal">0,50</span>
+                    <span class="text-xs font-mono text-cae-muted">mm máx</span>
+                </div>
+                <span class="text-[11px] font-mono text-cae-teal font-bold">Proteção de Punção &amp; Matriz</span>
+            </div>
+        </div>
+
+        <div class="glass-panel p-3.5 flex flex-col justify-between">
+            <span class="text-[10px] font-mono text-cae-muted uppercase font-bold">Força Nominal (Prensa 4t)</span>
+            <div class="mt-1">
+                <div class="flex items-baseline gap-1.5">
+                    <span id="kpiPressForce" class="text-2xl font-mono font-extrabold text-cae-amber">1,56</span>
+                    <span class="text-xs font-mono text-cae-muted">toneladas</span>
+                </div>
+                <span id="kpiPressStatus" class="text-[11px] font-mono text-cae-teal font-bold">Carga Segura (&le; 4,0t)</span>
+            </div>
+        </div>
+
+        <div class="glass-panel p-3.5 flex flex-col justify-between">
+            <span class="text-[10px] font-mono text-cae-muted uppercase font-bold">Alívio de Força por Ângulo</span>
+            <div class="mt-1">
+                <div class="flex items-baseline gap-1.5">
+                    <span id="kpiReliefPct" class="text-2xl font-mono font-extrabold text-cae-teal">-60%</span>
+                    <span class="text-xs font-mono text-cae-muted">1 inclinação</span>
+                </div>
+                <span class="text-[11px] font-mono text-cae-muted font-bold">i = 1,5·e (2,64 mm)</span>
+            </div>
+        </div>
+
+        <div class="glass-panel p-3.5 flex flex-col justify-between">
+            <span class="text-[10px] font-mono text-cae-muted uppercase font-bold">Folga de Corte Padrão</span>
+            <div class="mt-1">
+                <div class="flex items-baseline gap-1.5">
+                    <span id="kpiDieClearance" class="text-2xl font-mono font-extrabold text-cae-text">8%</span>
+                    <span class="text-xs font-mono text-cae-muted">por lado do perfil</span>
+                </div>
+                <span class="text-[11px] font-mono text-cae-amber font-bold">Trava-Cavaco a 6,5°</span>
+            </div>
+        </div>
+    </section>
+
+    <!-- MÓDULO 1: CINEMÁTICA BIHLER & FORÇA DA PRENSA -->
+    <div id="viewModule1" class="flex-1 flex flex-col gap-4">
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-4 flex-1">
+
+            <!-- VISUALIZAÇÃO ANIMADA DO CURSO DA PRENSA (CANVAS HiDPI) -->
+            <div class="lg:col-span-7 glass-panel p-4 flex flex-col justify-between">
+                <div>
+                    <div class="flex justify-between items-center mb-2 pb-2 border-b border-cae-border">
+                        <div>
+                            <span class="text-[10px] font-mono text-cae-amber uppercase font-bold">Gradiente de Força &amp; Ciclo Excêntrico</span>
+                            <h2 class="text-sm font-bold text-cae-text">Cinemática da Prensa Bihler (Curso Fixo, Ajuste ±4mm)</h2>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <button type="button" id="btnToggleStrokeAnim" class="px-2.5 py-1 rounded bg-cae-teal/15 border border-cae-teal text-cae-teal text-xs font-mono font-bold hover:bg-cae-teal/25 transition">
+                                ⏸ Pausar
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="relative w-full h-[260px] bg-cae-bg/85 rounded-xl border border-cae-border overflow-hidden">
+                        <canvas id="strokeCanvas" class="w-full h-full block"></canvas>
+                    </div>
+                </div>
+
+                <!-- CONTROLES DO CURSO -->
+                <div class="mt-3 bg-cae-bg p-3 rounded-xl border border-cae-border flex flex-col gap-2">
+                    <div class="flex justify-between items-center text-xs font-mono">
+                        <label for="slStrokeAngle" class="text-cae-text font-bold">Posição Angular do Eixo Excêntrico:</label>
+                        <span id="valStrokeAngle" class="text-cae-teal font-extrabold">60° (Ponto de Força Máxima)</span>
+                    </div>
+                    <div class="hmi-slider-container">
+                        <div class="slider-fill" id="fillStrokeAngle" style="width: 16.6%;"></div>
+                        <input type="range" id="slStrokeAngle" min="0" max="360" step="1" value="60">
+                    </div>
+                    <div class="flex justify-between text-[10px] font-mono text-cae-muted">
+                        <span>0° / 360° (Ponto Neutro)</span>
+                        <span class="text-cae-amber font-bold">60° (Força Nominal FN a 30° do PMI)</span>
+                        <span class="text-cae-teal font-bold">90° (B.D.C. / P.M.I.)</span>
+                        <span>270° (T.D.C. / P.M.S.)</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TEORIA & REGRAS FUNDAMENTAIS BIHLER -->
+            <div class="lg:col-span-5 glass-panel p-4 flex flex-col justify-between">
+                <div>
+                    <span class="text-xs font-mono font-bold text-cae-amber uppercase tracking-wider block mb-1">Padrões de Ferramental de Corte</span>
+                    <h3 class="text-sm font-bold text-cae-text mb-3">Critérios de Regulagem &amp; Proteção de Vida Útil</h3>
+
+                    <div class="space-y-2.5 text-xs font-mono text-cae-muted leading-relaxed">
+                        <div class="p-2.5 rounded-lg bg-cae-bg border border-cae-border">
+                            <strong class="text-cae-teal block mb-0.5">• Regra de Ouro da Penetração (&le; 0,5 mm):</strong>
+                            Os punções <span class="text-cae-text font-bold">não devem penetrar na matriz de corte mais do que 0,5 mm</span>. Ultrapassar este valor multiplica o esforço da prensa e gera atrito lateral destrutivo.
+                        </div>
+
+                        <div class="p-2.5 rounded-lg bg-cae-bg border border-cae-border">
+                            <strong class="text-cae-amber block mb-0.5">• Gradiente de Força Nominal:</strong>
+                            A força máxima nominal da prensa é atingida <span class="text-cae-text font-bold">30° antes do Ponto Morto Mais Baixo (B.D.C.)</span>, ou seja, no ângulo de 60°.
+                        </div>
+
+                        <div class="p-2.5 rounded-lg bg-cae-bg border border-cae-border">
+                            <strong class="text-cae-primary block mb-0.5">• Limitadores da Ferramenta:</strong>
+                            Garantem que os punções trabalhem sempre no mesmo curso e pressão. No ponto mais baixo, <span class="text-cae-text font-bold">considera-se folga zero entre os limitadores</span>.
+                        </div>
+
+                        <div class="p-2.5 rounded-lg bg-cae-bg border border-cae-border">
+                            <strong class="text-purple-400 block mb-0.5">• Força do Pisador (FP):</strong>
+                            Calculada rigorosamente como <span class="text-cae-text font-bold">FP = 30% · FC</span> (Força de Corte).
+                        </div>
+                    </div>
+                </div>
+
+                <div class="p-3 bg-cae-bg rounded-xl border border-cae-border flex justify-between items-center text-xs font-mono mt-3">
+                    <span class="text-cae-muted">Folga de Fixação do Punção:</span>
+                    <span class="text-cae-teal font-bold">Ffix = σcis / 10.000</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MÓDULO 2: COMPARADOR DINÂMICO DE FORÇA & ESCALONAMENTO -->
+    <div id="viewModule2" class="hidden flex-1 flex flex-col gap-4">
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-4 flex-1">
+
+            <!-- CONTROLES PARAMÉTRICOS DO PRODUTO (5 COLUNAS) -->
+            <div class="lg:col-span-5 glass-panel p-4 flex flex-col justify-between">
+                <div>
+                    <span class="text-xs font-mono font-bold text-cae-amber uppercase tracking-wider block mb-1">Parâmetros de Corte da Fita</span>
+                    <h3 class="text-sm font-bold text-cae-text mb-3">Dimensionamento da Tira &amp; Punções</h3>
+
+                    <div class="space-y-3 font-mono text-xs">
+                        <div>
+                            <div class="flex justify-between items-center mb-1">
+                                <label for="slThickness" class="text-cae-text font-bold">Espessura da Chapa (e):</label>
+                                <span id="valThickness" class="text-cae-teal font-bold">1,76 mm</span>
+                            </div>
+                            <div class="hmi-slider-container">
+                                <div class="slider-fill" id="fillThickness" style="width: 44%;"></div>
+                                <input type="range" id="slThickness" min="0.5" max="3.5" step="0.02" value="1.76">
+                            </div>
+                        </div>
+
+                        <div>
+                            <div class="flex justify-between items-center mb-1">
+                                <label for="slPunchDia" class="text-cae-text font-bold">Diâmetro do Punção (Ø):</label>
+                                <span id="valPunchDia" class="text-cae-teal font-bold">Ø6,0 mm (P = 18,85 mm)</span>
+                            </div>
+                            <div class="hmi-slider-container">
+                                <div class="slider-fill" id="fillPunchDia" style="width: 30%;"></div>
+                                <input type="range" id="slPunchDia" min="2.0" max="15.0" step="0.5" value="6.0">
+                            </div>
+                        </div>
+
+                        <div>
+                            <div class="flex justify-between items-center mb-1">
+                                <label for="slTensileStrength" class="text-cae-text font-bold">Resistência à Tração (σt):</label>
+                                <span id="valTensileStrength" class="text-cae-amber font-bold">580 N/mm² (59,1 kgf/mm²)</span>
+                            </div>
+                            <div class="hmi-slider-container">
+                                <div class="slider-fill" id="fillTensileStrength" style="width: 47%;"></div>
+                                <input type="range" id="slTensileStrength" min="300" max="900" step="10" value="580">
+                            </div>
+                            <span class="text-[10px] text-cae-muted">Aço Mola / SAE 1060 Recozido / 51CrV4</span>
+                        </div>
+
+                        <div class="p-3 bg-cae-bg rounded-xl border border-cae-border">
+                            <span class="text-cae-muted text-[11px] block mb-1 font-bold">Capacidade Máxima da Prensa Bihler:</span>
+                            <div class="flex justify-between items-center">
+                                <span class="text-sm font-extrabold text-cae-text">4,00 Toneladas</span>
+                                <span id="badgeOverload" class="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/15 text-cae-teal border border-cae-teal/30">
+                                    Prensa Aprovada
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="text-[11px] font-mono text-cae-muted p-2.5 rounded-lg bg-cae-bg border border-cae-border mt-3">
+                    <strong class="text-cae-text">Fórmula Escalonamento:</strong> Esc = 1/3 · e = <span id="txtEscValue" class="text-cae-teal font-bold">0,59 mm</span> de um punção ao outro.
+                </div>
+            </div>
+
+            <!-- RESULTADOS COMPARATIVOS DOS 4 CENÁRIOS (7 COLUNAS) -->
+            <div class="lg:col-span-7 glass-panel p-4 flex flex-col justify-between">
+                <div>
+                    <span class="text-xs font-mono font-bold text-cae-teal uppercase tracking-wider block mb-1">Impacto nos Picos de Força</span>
+                    <h3 class="text-sm font-bold text-cae-text mb-3">Comparativo de 3 Punções na Prensa</h3>
+
+                    <!-- 4 CARDS DE CENÁRIO -->
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
+
+                        <!-- CENÁRIO 1: 3 RETOS SIMULTÂNEOS -->
+                        <div id="cardCen1" class="p-3 rounded-xl border border-cae-danger bg-red-500/10 flex flex-col justify-between">
+                            <div class="flex justify-between items-start">
+                                <span class="text-xs font-mono font-bold text-red-400">1. Três Punções Retos</span>
+                                <span class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-red-500 text-white font-bold">SOBRECARGA</span>
+                            </div>
+                            <div class="my-2">
+                                <span id="valForceCen1" class="text-2xl font-mono font-extrabold text-red-400">4,68 t</span>
+                                <span class="text-[11px] font-mono text-cae-muted block">3 × 1,56 t (Pico Simultâneo)</span>
+                            </div>
+                            <span class="text-[10px] font-mono text-red-400">Estoura o limite de 4t da máquina!</span>
+                        </div>
+
+                        <!-- CENÁRIO 2: 3 RETOS ESCALONADOS (1/3 * e) -->
+                        <div class="p-3 rounded-xl border border-cae-teal bg-cae-bg flex flex-col justify-between">
+                            <div class="flex justify-between items-start">
+                                <span class="text-xs font-mono font-bold text-cae-teal">2. Escalonados (1/3·e)</span>
+                                <span class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-emerald-500/20 text-cae-teal font-bold">APROVADO</span>
+                            </div>
+                            <div class="my-2">
+                                <span id="valForceCen2" class="text-2xl font-mono font-extrabold text-cae-teal">1,56 t</span>
+                                <span class="text-[11px] font-mono text-cae-muted block">Cortes em tempos diferentes</span>
+                            </div>
+                            <span class="text-[10px] font-mono text-cae-teal">Carga dividida • Seguro na prensa de 4t!</span>
+                        </div>
+
+                        <!-- CENÁRIO 3: 3 COM DUPLA INCLINAÇÃO -->
+                        <div class="p-3 rounded-xl border border-cae-border bg-cae-bg flex flex-col justify-between">
+                            <div class="flex justify-between items-start">
+                                <span class="text-xs font-mono font-bold text-cae-amber">3. Dupla Inclinação (2Â)</span>
+                                <span class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-amber-500/20 text-cae-amber font-bold">-48% Força</span>
+                            </div>
+                            <div class="my-2">
+                                <span id="valForceCen3" class="text-2xl font-mono font-extrabold text-cae-amber">2,49 t</span>
+                                <span class="text-[11px] font-mono text-cae-muted block">3 × 0,83 t (Ângulo i = 1,5e)</span>
+                            </div>
+                            <span class="text-[10px] font-mono text-cae-muted">Simultâneo c/ cisalhamento progressivo</span>
+                        </div>
+
+                        <!-- CENÁRIO 4: 3 COM UMA INCLINAÇÃO -->
+                        <div class="p-3 rounded-xl border border-cae-border bg-cae-bg flex flex-col justify-between">
+                            <div class="flex justify-between items-start">
+                                <span class="text-xs font-mono font-bold text-cae-teal">4. Uma Inclinação (1Â)</span>
+                                <span class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-cae-teal/20 text-cae-teal font-bold">-60% Força</span>
+                            </div>
+                            <div class="my-2">
+                                <span id="valForceCen4" class="text-2xl font-mono font-extrabold text-cae-teal">1,86 t</span>
+                                <span class="text-[11px] font-mono text-cae-muted block">3 × 0,62 t (Ângulo i = 1,5e)</span>
+                            </div>
+                            <span class="text-[10px] font-mono text-cae-muted">Alívio máximo de carga na prensa</span>
+                        </div>
+                    </div>
+
+                    <!-- GRÁFICO DE PICO DE FORÇA NO TEMPO (CHART.JS) -->
+                    <div class="relative w-full h-[150px]">
+                        <canvas id="chartForceProfile"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MÓDULO 3: FÍSICA DO CORTE, FOLGA IDEAL & TRAVA-CAVACO -->
+    <div id="viewModule3" class="hidden flex-1 flex flex-col gap-4">
+        <!-- LINHA SUPERIOR: ANIMAÇÃO DE FRATURA (6 COLUNAS) + GRÁFICO DE VIDA ÚTIL & REBARBA (6 COLUNAS) -->
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-4">
+
+            <!-- ANIMAÇÃO DO CORTE TRANSVERSAL DA CHAPA (CANVAS HiDPI) -->
+            <div class="lg:col-span-6 glass-panel p-4 flex flex-col justify-between">
+                <div>
+                    <div class="flex flex-wrap justify-between items-center mb-2 pb-2 border-b border-cae-border gap-2">
+                        <div>
+                            <span class="text-[10px] font-mono text-cae-amber uppercase font-bold">Zonas de Cisalhamento &amp; Anti-Slug Pulling</span>
+                            <h2 class="text-sm font-bold text-cae-text">Morfologia de Fratura &amp; Formação da Rebarba</h2>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <span id="badgeFracturePhase" class="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-cae-bg text-cae-amber border border-cae-border">
+                                Fase 1: Descida Livre
+                            </span>
+                            <span id="badgeClearanceStatus" class="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-emerald-500/15 text-cae-teal border border-cae-teal/30">
+                                Folga Ideal (8%·e)
+                            </span>
+                            <button type="button" id="btnToggleFractureAnim" class="px-2.5 py-1 rounded bg-cae-teal/15 border border-cae-teal text-cae-teal text-xs font-mono font-bold hover:bg-cae-teal/25 transition">
+                                ⏸ Pausar
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="relative w-full h-[255px] bg-cae-bg/85 rounded-xl border border-cae-border overflow-hidden">
+                        <canvas id="fractureCanvas" class="w-full h-full block"></canvas>
+                    </div>
+                </div>
+
+                <!-- SLIDER DA FOLGA DE CORTE & STATUS DO CICLO -->
+                <div class="mt-3 bg-cae-bg p-3 rounded-xl border border-cae-border flex flex-col gap-2">
+                    <div class="flex justify-between items-center text-xs font-mono">
+                        <label for="slClearancePct" class="text-cae-text font-bold">Folga de Corte por Lado (% da espessura):</label>
+                        <span id="valClearancePct" class="text-cae-teal font-extrabold">8,0% (0,14 mm) • Ideal</span>
+                    </div>
+                    <div class="hmi-slider-container">
+                        <div class="slider-fill" id="fillClearancePct" style="width: 40%;"></div>
+                        <input type="range" id="slClearancePct" min="2" max="18" step="0.5" value="8.0">
+                    </div>
+                    <div class="flex justify-between text-[10px] font-mono text-cae-muted">
+                        <span class="text-cae-danger font-bold">&lt; 5% (Segundo Cisalhamento)</span>
+                        <span class="text-cae-teal font-bold">6% a 10% (Ideal Bihler)</span>
+                        <span class="text-cae-amber font-bold">&gt; 11% (Rebarba Excessiva)</span>
+                    </div>
+
+                    <!-- Fases do Ciclo de Fratura e Penetração -->
+                    <div class="pt-2 border-t border-cae-border flex justify-between items-center text-[10px] font-mono">
+                        <span class="text-cae-muted">Status do Golpe Bihler:</span>
+                        <div class="flex items-center gap-2">
+                            <span id="lblFractureStrokePos" class="text-cae-teal font-bold">Penetração: 0,00 mm</span>
+                            <span class="text-cae-muted">|</span>
+                            <span id="lblFractureAction" class="text-cae-amber font-bold">Descida Livre</span>
+                            <button type="button" id="btnStepFracture" class="px-2 py-0.5 rounded bg-cae-surface border border-cae-border text-cae-text hover:text-cae-teal text-[10px] transition font-bold">
+                                ⏭ Passo (+10%)
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- NOVO GRÁFICO INTERATIVO: CURVA DE OEHLER (VIDA ÚTIL × REBARBA) & MAPA DE CONTORNO (PROCESS WINDOW) -->
+            <div class="lg:col-span-6 glass-panel p-4 flex flex-col justify-between">
+                <div>
+                    <div class="flex flex-wrap justify-between items-center mb-2 pb-2 border-b border-cae-border gap-2">
+                        <div>
+                            <span class="text-[10px] font-mono text-cae-teal uppercase font-bold">Curva de Oehler &amp; DOE de Processo</span>
+                            <h2 class="text-sm font-bold text-cae-text">Folga de Corte vs. Vida Útil &amp; Rebarba</h2>
+                        </div>
+                        <span id="badgeToolLifeRegime" class="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-emerald-500/15 text-cae-teal border border-cae-teal/30">
+                            Faixa Ótima Bihler (Pico de Vida)
+                        </span>
+                    </div>
+
+                    <!-- SELETOR DE MODO: CURVA 2D vs. MAPA DE CONTORNO (PROCESS WINDOW) -->
+                    <div class="flex items-center justify-between gap-2 mb-2">
+                        <div class="flex bg-cae-bg border border-cae-border rounded-lg p-0.5 text-[11px] font-mono">
+                            <button type="button" id="btnModeCurve" class="px-2.5 py-1 rounded bg-cae-teal text-cae-bg font-extrabold shadow-sm transition">
+                                📈 Curva 2D (Oehler)
+                            </button>
+                            <button type="button" id="btnModeHeatmap" class="px-2.5 py-1 rounded text-cae-muted hover:text-cae-text font-bold transition">
+                                🗺️ Mapa de Contorno (DOE 250k)
+                            </button>
+                        </div>
+                        <span id="lblModeHint" class="text-[10px] font-mono text-cae-muted hidden sm:inline">
+                            Sincronizado ao Slider
+                        </span>
+                    </div>
+
+                    <!-- 2 KPIS DINÂMICOS VINCULADOS AO SLIDER -->
+                    <div class="grid grid-cols-2 gap-2.5 mb-2.5">
+                        <div class="bg-cae-bg p-2.5 rounded-lg border border-cae-border">
+                            <span class="text-[10px] font-mono text-cae-muted uppercase block">Vida Útil Estimada:</span>
+                            <div class="flex items-baseline gap-1 mt-0.5">
+                                <span id="kpiLifeShots" class="text-xl font-mono font-extrabold text-cae-teal">185.000</span>
+                                <span class="text-[10px] font-mono text-cae-muted">golpes</span>
+                            </div>
+                            <span id="kpiLifeSub" class="text-[10px] font-mono text-cae-teal font-bold block mt-0.5">
+                                Pico de Longevidade (Faixa Ideal)
+                            </span>
+                        </div>
+                        <div class="bg-cae-bg p-2.5 rounded-lg border border-cae-border">
+                            <span class="text-[10px] font-mono text-cae-muted uppercase block">Altura da Rebarba (hᵣ):</span>
+                            <div class="flex items-baseline gap-1 mt-0.5">
+                                <span id="kpiBurrHeight" class="text-xl font-mono font-extrabold text-cae-amber">11 µm</span>
+                                <span class="text-[10px] font-mono text-cae-muted">LSE: 35 µm</span>
+                            </div>
+                            <span id="kpiBurrStatus" class="text-[10px] font-mono text-cae-teal font-bold block mt-0.5">
+                                Aprovada Conforme Norma DIN
+                            </span>
+                        </div>
+                    </div>
+
+                    <!-- CONTAINER 1: CURVA DE OEHLER (CHART.JS) -->
+                    <div id="containerModeCurve" class="relative w-full h-[185px]">
+                        <canvas id="chartClearanceLife"></canvas>
+                    </div>
+
+                    <!-- CONTAINER 2: MAPA DE CONTORNO / HEATMAP (CANVAS HiDPI NATIVO) -->
+                    <div id="containerModeHeatmap" class="hidden relative w-full h-[185px] bg-cae-bg/90 rounded-xl border border-cae-border overflow-hidden">
+                        <canvas id="chartHeatmapCanvas" class="w-full h-full block"></canvas>
+                    </div>
+                </div>
+
+                <!-- NOTA TÉCNICA DINÂMICA DE RODAPÉ -->
+                <div class="mt-2.5 p-2 bg-cae-bg/80 rounded-lg border border-cae-border flex justify-between items-center text-[10px] font-mono">
+                    <span class="text-cae-muted">Regra de Processo:</span>
+                    <span id="lblModeFooter" class="text-cae-teal font-bold">Folga &lt; 5%: atrito severo derruba 80% da vida útil • Folga &gt; 11%: estouro de rebarba</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- BANNER INFERIOR: ENGENHARIA ANTI-RETORNO DE RETALHO & PINOS GUIAS (3 COLUNAS) -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-3.5">
+            <!-- ESQUEMA DO TRAVA CAVACO -->
+            <div class="glass-panel p-3.5 font-mono text-xs flex flex-col justify-between">
+                <div>
+                    <div class="flex justify-between items-center mb-1">
+                        <span class="font-bold text-cae-text">• Trava-Cavaco na Matriz:</span>
+                        <span class="text-cae-amber font-bold">6,5° Oposto</span>
+                    </div>
+                    <p class="text-[11px] text-cae-muted leading-relaxed">
+                        Usinado no centro do perfil por EDM com profundidade <strong class="text-cae-teal">Ptc = 65% · Fc</strong> (0,05 mm) e raio R = 0,15 mm. Impede sucção por vácuo e quebra do estampo.
+                    </p>
+                </div>
+                <div class="grid grid-cols-2 gap-2 text-[10px] text-cae-muted pt-2 border-t border-cae-border mt-2">
+                    <div>Degrau: <strong class="text-cae-text">0,02 a 0,05 mm</strong></div>
+                    <div>Alívio Reto: <strong class="text-cae-text">0,75° (2 a 3 mm)</strong></div>
+                </div>
+            </div>
+
+            <!-- REGRA DOS PINOS GUIAS -->
+            <div class="glass-panel p-3.5 font-mono text-xs flex flex-col justify-between">
+                <div>
+                    <div class="flex justify-between items-center mb-1">
+                        <span class="font-bold text-cae-text">• Sincronismo dos Pinos Guias:</span>
+                        <span class="text-cae-teal font-bold">Entrada 2·e Antes</span>
+                    </div>
+                    <p class="text-[11px] text-cae-muted leading-relaxed">
+                        O pino guia cônico deve penetrar no furo piloto da fita <strong class="text-cae-teal">2 × a espessura da chapa antes do punção tocar o material</strong>. Evita amassamento e perda de passo.
+                    </p>
+                </div>
+                <div class="text-[10px] text-cae-muted pt-2 border-t border-cae-border mt-2">
+                    Tolerância de Centralização: <strong class="text-cae-text">± 0,01 mm no avanço</strong>
+                </div>
+            </div>
+
+            <!-- FÓRMULA DE OEHLER -->
+            <div class="glass-panel p-3.5 font-mono text-xs flex flex-col justify-between">
+                <div>
+                    <div class="flex justify-between items-center mb-1">
+                        <span class="font-bold text-cae-text">• Equação de Oehler (Folga Ideal):</span>
+                        <span class="text-cae-teal font-bold">Fc = 8% · e</span>
+                    </div>
+                    <p class="text-[11px] text-cae-muted leading-relaxed">
+                        Cálculo analítico para 51CrV4 (e = 1,76 mm): <strong class="text-cae-teal">f = (0,01·e − 0,015) · &radic;ks</strong>. Garante encontro linear perfeito das trincas no núcleo da chapa.
+                    </p>
+                </div>
+                <div class="text-[10px] text-cae-teal pt-2 border-t border-cae-border mt-2 flex justify-between">
+                    <span>Folga Nominal por Lado:</span>
+                    <strong class="text-cae-text">0,14 mm (8,0%)</strong>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        (function() {
+            const htmlEl = document.documentElement;
+            const themeToggle = document.getElementById('themeToggle');
+            const sunIcon = document.getElementById('sunIcon');
+            const moonIcon = document.getElementById('moonIcon');
+            const themeText = document.getElementById('themeText');
+
+            function getThemeColors() {
+                const s = getComputedStyle(htmlEl);
+                return {
+                    text: s.getPropertyValue('--cae-text').trim(),
+                    muted: s.getPropertyValue('--cae-muted').trim(),
+                    teal: s.getPropertyValue('--cae-teal').trim(),
+                    amber: s.getPropertyValue('--cae-amber').trim(),
+                    danger: s.getPropertyValue('--cae-danger').trim(),
+                    grid: s.getPropertyValue('--cae-grid').trim(),
+                    surface: s.getPropertyValue('--cae-surface').trim()
+                };
+            }
+
+            function syncThemeUi() {
+                const t = htmlEl.getAttribute('data-theme') || 'dark';
+                if (t === 'light') {
+                    sunIcon.classList.remove('hidden');
+                    moonIcon.classList.add('hidden');
+                    themeText.textContent = 'Claro';
+                } else {
+                    sunIcon.classList.add('hidden');
+                    moonIcon.classList.remove('hidden');
+                    themeText.textContent = 'Escuro';
+                }
+            }
+
+            // NAVEGAÇÃO ENTRE MÓDULOS
+            const tabModule1 = document.getElementById('tabModule1');
+            const tabModule2 = document.getElementById('tabModule2');
+            const tabModule3 = document.getElementById('tabModule3');
+            const viewModule1 = document.getElementById('viewModule1');
+            const viewModule2 = document.getElementById('viewModule2');
+            const viewModule3 = document.getElementById('viewModule3');
+
+            function switchModule(m) {
+                [tabModule1, tabModule2, tabModule3].forEach(t => t.classList.remove('active'));
+                [viewModule1, viewModule2, viewModule3].forEach(v => v.classList.add('hidden'));
+
+                if (m === 1) {
+                    tabModule1.classList.add('active');
+                    viewModule1.classList.remove('hidden');
+                    resizeStrokeCanvas();
+                } else if (m === 2) {
+                    tabModule2.classList.add('active');
+                    viewModule2.classList.remove('hidden');
+                    if (!forceChart) initForceChart();
+                    else forceChart.resize();
+                } else {
+                    tabModule3.classList.add('active');
+                    viewModule3.classList.remove('hidden');
+                    resizeFractureCanvas();
+                    if (!clearanceLifeChart) initClearanceLifeChart();
+                    else clearanceLifeChart.resize();
+                    if (currentChartMode === 'heatmap') {
+                        resizeHeatmapCanvas();
+                        drawHeatmapScene();
+                    }
+                }
+            }
+
+            tabModule1.addEventListener('click', () => switchModule(1));
+            tabModule2.addEventListener('click', () => switchModule(2));
+            tabModule3.addEventListener('click', () => switchModule(3));
+
+            /* ==========================================================================
+               MÓDULO 1: ANIMAÇÃO DA PRENSA BIHLER & CURSO EXCÊNTRICO (CANVAS 60FPS)
+               ========================================================================== */
+            const strokeCanvas = document.getElementById('strokeCanvas');
+            const strokeCtx = strokeCanvas.getContext('2d');
+            const slStrokeAngle = document.getElementById('slStrokeAngle');
+            const valStrokeAngle = document.getElementById('valStrokeAngle');
+            const fillStrokeAngle = document.getElementById('fillStrokeAngle');
+            const btnToggleStrokeAnim = document.getElementById('btnToggleStrokeAnim');
+
+            let strokeAnimRunning = true;
+            let currentAngle = 60; // graus
+
+            function resizeStrokeCanvas() {
+                const dpr = window.devicePixelRatio || 1;
+                const rect = strokeCanvas.getBoundingClientRect();
+                strokeCanvas.width = rect.width * dpr;
+                strokeCanvas.height = rect.height * dpr;
+                strokeCtx.scale(dpr, dpr);
+            }
+            window.addEventListener('resize', resizeStrokeCanvas);
+            resizeStrokeCanvas();
+
+            btnToggleStrokeAnim.addEventListener('click', () => {
+                strokeAnimRunning = !strokeAnimRunning;
+                btnToggleStrokeAnim.textContent = strokeAnimRunning ? '⏸ Pausar' : '▶ Iniciar Rotação';
+            });
+
+            slStrokeAngle.addEventListener('input', () => {
+                currentAngle = parseFloat(slStrokeAngle.value);
+                strokeAnimRunning = false;
+                btnToggleStrokeAnim.textContent = '▶ Iniciar Rotação';
+                updateStrokeUi();
+            });
+
+            function updateStrokeUi() {
+                fillStrokeAngle.style.width = `${(currentAngle / 360) * 100}%`;
+                let note = '';
+                if (Math.abs(currentAngle - 60) <= 8) note = ' • FN Máxima (30° antes do PMI)';
+                else if (Math.abs(currentAngle - 90) <= 6) note = ' • B.D.C. (Ponto Morto Inferior)';
+                else if (Math.abs(currentAngle - 270) <= 6) note = ' • T.D.C. (Ponto Morto Superior)';
+                valStrokeAngle.textContent = `${Math.round(currentAngle)}°${note}`;
+            }
+
+            function drawStrokeScene() {
+                const w = strokeCanvas.getBoundingClientRect().width;
+                const h = strokeCanvas.getBoundingClientRect().height;
+                strokeCtx.clearRect(0, 0, w, h);
+                const c = getThemeColors();
+
+                const cx = w * 0.35;
+                const cy = h * 0.50;
+                const R = Math.min(w * 0.22, 68);
+
+                // Círculo Excêntrico de 360°
+                strokeCtx.beginPath();
+                strokeCtx.arc(cx, cy, R, 0, Math.PI * 2);
+                strokeCtx.strokeStyle = c.grid;
+                strokeCtx.lineWidth = 2;
+                strokeCtx.stroke();
+
+                // Eixos do círculo
+                strokeCtx.beginPath();
+                strokeCtx.moveTo(cx - R - 15, cy);
+                strokeCtx.lineTo(cx + R + 15, cy);
+                strokeCtx.moveTo(cx, cy - R - 15);
+                strokeCtx.lineTo(cx, cy + R + 15);
+                strokeCtx.strokeStyle = c.border;
+                strokeCtx.lineWidth = 1;
+                strokeCtx.stroke();
+
+                // Rótulos angulares
+                strokeCtx.fillStyle = c.muted;
+                strokeCtx.font = "bold 9px 'JetBrains Mono', monospace";
+                strokeCtx.textAlign = 'center';
+                strokeCtx.fillText('270° (TDC)', cx, cy - R - 6);
+                strokeCtx.fillText('90° (BDC)', cx, cy + R + 14);
+                strokeCtx.fillText('180°', cx - R - 14, cy + 3);
+                strokeCtx.fillText('0°/360°', cx + R + 22, cy + 3);
+
+                // Ângulo de Força Nominal (60° -> 30° antes de 90°)
+                const rad60 = (60 * Math.PI) / 180;
+                const x60 = cx + R * Math.cos(rad60);
+                const y60 = cy + R * Math.sin(rad60);
+                strokeCtx.beginPath();
+                strokeCtx.moveTo(cx, cy);
+                strokeCtx.lineTo(x60, y60);
+                strokeCtx.strokeStyle = c.amber;
+                strokeCtx.lineWidth = 1.8;
+                strokeCtx.stroke();
+                strokeCtx.fillStyle = c.amber;
+                strokeCtx.fillText('FN (60°)', x60 + 16, y60 + 4);
+
+                // Ponto Atual do Excêntrico
+                const rad = (currentAngle * Math.PI) / 180;
+                const px = cx + R * Math.cos(rad);
+                const py = cy + R * Math.sin(rad);
+
+                // Braço excêntrico
+                strokeCtx.beginPath();
+                strokeCtx.moveTo(cx, cy);
+                strokeCtx.lineTo(px, py);
+                strokeCtx.strokeStyle = c.teal;
+                strokeCtx.lineWidth = 3;
+                strokeCtx.stroke();
+
+                strokeCtx.beginPath();
+                strokeCtx.arc(px, py, 5, 0, Math.PI * 2);
+                strokeCtx.fillStyle = c.teal;
+                strokeCtx.fill();
+
+                // ILUSTRAÇÃO DA MATRIZ E DO PUNÇÃO (LADO DIREITO)
+                const rx = w * 0.72;
+                const dieY = h * 0.65;
+                const stripThickness = 12;
+
+                // Fita de metal (amarela / mola)
+                strokeCtx.fillStyle = c.amber;
+                strokeCtx.fillRect(rx - 65, dieY - stripThickness, 130, stripThickness);
+
+                // Matriz de corte (base inferior com furo)
+                strokeCtx.fillStyle = c.surface;
+                strokeCtx.fillRect(rx - 65, dieY, 130, 48);
+                strokeCtx.strokeStyle = c.border;
+                strokeCtx.strokeRect(rx - 65, dieY, 130, 48);
+                // Abertura do furo na matriz
+                strokeCtx.clearRect(rx - 18, dieY, 36, 48);
+                strokeCtx.strokeRect(rx - 18, dieY, 36, 48);
+
+                // Penetração calculada pelo seno do ângulo
+                // No PMI (90°), penetração = 0,5 mm (calibrado)
+                const strokeNorm = Math.sin(rad); // -1 a +1
+                let penetrationMm = 0;
+                let punchY = dieY - stripThickness - 30; // punção recuado
+
+                if (strokeNorm > 0.5) { // próximo do corte
+                    penetrationMm = ((strokeNorm - 0.5) / 0.5) * 0.50; // max 0.50 mm
+                    punchY = dieY + (penetrationMm * 18);
+                }
+
+                // Punção descendo
+                strokeCtx.fillStyle = c.teal;
+                strokeCtx.fillRect(rx - 17, punchY - 55, 34, 55);
+                strokeCtx.strokeStyle = '#090E17';
+                strokeCtx.strokeRect(rx - 17, punchY - 55, 34, 55);
+
+                // Cota de penetração
+                if (penetrationMm > 0) {
+                    strokeCtx.fillStyle = c.teal;
+                    strokeCtx.font = "bold 10px 'JetBrains Mono', monospace";
+                    strokeCtx.textAlign = 'left';
+                    strokeCtx.fillText(`Penetração: ${penetrationMm.toFixed(2)} mm`, rx + 24, dieY + 14);
+                    strokeCtx.fillText(`(Limite Bihler ≤ 0,50mm)`, rx + 24, dieY + 28);
+                } else {
+                    strokeCtx.fillStyle = c.muted;
+                    strokeCtx.font = "9px 'JetBrains Mono', monospace";
+                    strokeCtx.textAlign = 'left';
+                    strokeCtx.fillText('Punção em curso de retorno', rx + 24, dieY + 18);
+                }
+            }
+
+            function loopStroke() {
+                if (strokeAnimRunning) {
+                    currentAngle = (currentAngle + 0.8) % 360;
+                    slStrokeAngle.value = currentAngle;
+                    updateStrokeUi();
+                }
+                drawStrokeScene();
+                requestAnimationFrame(loopStroke);
+            }
+            requestAnimationFrame(loopStroke);
+
+            /* ==========================================================================
+               MÓDULO 2: CÁLCULO DE FORÇA DE CORTE & ESCALONAMENTO (CHART.JS)
+               ========================================================================== */
+            const slThickness = document.getElementById('slThickness');
+            const slPunchDia = document.getElementById('slPunchDia');
+            const slTensileStrength = document.getElementById('slTensileStrength');
+            const valThickness = document.getElementById('valThickness');
+            const valPunchDia = document.getElementById('valPunchDia');
+            const valTensileStrength = document.getElementById('valTensileStrength');
+            const fillThickness = document.getElementById('fillThickness');
+            const fillPunchDia = document.getElementById('fillPunchDia');
+            const fillTensileStrength = document.getElementById('fillTensileStrength');
+            const txtEscValue = document.getElementById('txtEscValue');
+
+            const valForceCen1 = document.getElementById('valForceCen1');
+            const valForceCen2 = document.getElementById('valForceCen2');
+            const valForceCen3 = document.getElementById('valForceCen3');
+            const valForceCen4 = document.getElementById('valForceCen4');
+            const badgeOverload = document.getElementById('badgeOverload');
+            const cardCen1 = document.getElementById('cardCen1');
+
+            let forceChart = null;
+
+            function calculateForces() {
+                const e = parseFloat(slThickness.value);
+                const dia = parseFloat(slPunchDia.value);
+                const sigmaT = parseFloat(slTensileStrength.value); // N/mm²
+                const p = Math.PI * dia; // perímetro de corte (mm)
+                const i = 1.5 * e; // inclinação conforme Bihler (i = 1.5e)
+
+                fillThickness.style.width = `${((e - 0.5) / (3.5 - 0.5)) * 100}%`;
+                fillPunchDia.style.width = `${((dia - 2) / (15 - 2)) * 100}%`;
+                fillTensileStrength.style.width = `${((sigmaT - 300) / (900 - 300)) * 100}%`;
+
+                valThickness.textContent = `${e.toFixed(2)} mm`;
+                valPunchDia.textContent = `Ø${dia.toFixed(1)} mm (P = ${p.toFixed(2)} mm)`;
+                valTensileStrength.textContent = `${sigmaT} N/mm² (${(sigmaT / 9.81).toFixed(1)} kgf/mm²)`;
+
+                // Escalonamento = 1/3 * e
+                const esc = e / 3;
+                txtEscValue.textContent = `${esc.toFixed(2)} mm`;
+
+                // 1. Força para 1 punção reto (em kgf e toneladas)
+                // FC = (p * e * sigmaT * 0.8) / 9.8
+                const fc1RetoKgf = (p * e * sigmaT * 0.8) / 9.8;
+                const fc1RetoTon = fc1RetoKgf / 1000;
+
+                // Cenário 1: 3 punções retos simultâneos
+                const fCen1 = fc1RetoTon * 3;
+
+                // Cenário 2: 3 punções escalonados (pico máximo é de apenas 1 punção por vez!)
+                const fCen2 = fc1RetoTon;
+
+                // Cenário 3: 3 com 2 Ângulos
+                // FC = (1.33 * p * e^2 * sigmaT * 0.8) / ((i + e) * 9.8)
+                const fc1Ang2Kgf = (1.33 * p * Math.pow(e, 2) * sigmaT * 0.8) / ((i + e) * 9.8);
+                const fCen3 = (fc1Ang2Kgf * 3) / 1000;
+
+                // Cenário 4: 3 com 1 Ângulo
+                // FC = (p * e^2 * sigmaT * 0.8) / ((i + e) * 9.8)
+                const fc1Ang1Kgf = (p * Math.pow(e, 2) * sigmaT * 0.8) / ((i + e) * 9.8);
+                const fCen4 = (fc1Ang1Kgf * 3) / 1000;
+
+                valForceCen1.textContent = `${fCen1.toFixed(2)} t`;
+                valForceCen2.textContent = `${fCen2.toFixed(2)} t`;
+                valForceCen3.textContent = `${fCen3.toFixed(2)} t`;
+                valForceCen4.textContent = `${fCen4.toFixed(2)} t`;
+
+                // Atualizar KPIs globais do topo
+                document.getElementById('kpiPressForce').textContent = `${fCen2.toFixed(2)}`;
+
+                if (fCen1 > 4.0) {
+                    cardCen1.className = 'p-3 rounded-xl border border-cae-danger bg-red-500/10 flex flex-col justify-between';
+                }
+
+                if (forceChart) {
+                    forceChart.data.datasets[0].data = [
+                        Number(fCen1.toFixed(2)),
+                        Number(fCen2.toFixed(2)),
+                        Number(fCen3.toFixed(2)),
+                        Number(fCen4.toFixed(2))
+                    ];
+                    forceChart.update('none');
+                }
+            }
+
+            [slThickness, slPunchDia, slTensileStrength].forEach(sl => {
+                sl.addEventListener('input', calculateForces);
+            });
+
+            function initForceChart() {
+                const c = getThemeColors();
+                forceChart = new Chart(document.getElementById('chartForceProfile').getContext('2d'), {
+                    type: 'bar',
+                    data: {
+                        labels: ['1. Retos Simultâneos', '2. Escalonados (1/3·e)', '3. Dupla Inclinação (2Â)', '4. Uma Inclinação (1Â)'],
+                        datasets: [{
+                            label: 'Pico de Força (Toneladas)',
+                            data: [4.68, 1.56, 2.49, 1.86],
+                            backgroundColor: [c.danger, c.teal, c.amber, c.teal],
+                            borderRadius: 6,
+                            barPercentage: 0.55
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            x: { ticks: { color: c.muted, font: { family: 'JetBrains Mono', size: 9.5 } }, grid: { display: false } },
+                            y: {
+                                suggestedMax: 5.5,
+                                ticks: { color: c.muted, font: { family: 'JetBrains Mono', size: 9.5 } },
+                                grid: { color: c.grid }
+                            }
+                        },
+                        plugins: {
+                            legend: { display: false }
+                        }
+                    }
+                });
+            }
+
+            /* ==========================================================================
+               MÓDULO 3: FÍSICA DO CORTE, MORFOLOGIA DA FRATURA & TRAVA CAVACO
+               ========================================================================== */
+            const fractureCanvas = document.getElementById('fractureCanvas');
+            const fractureCtx = fractureCanvas.getContext('2d');
+            const slClearancePct = document.getElementById('slClearancePct');
+            const valClearancePct = document.getElementById('valClearancePct');
+            const fillClearancePct = document.getElementById('fillClearancePct');
+            const badgeClearanceStatus = document.getElementById('badgeClearanceStatus');
+            const badgeFracturePhase = document.getElementById('badgeFracturePhase');
+            const btnToggleFractureAnim = document.getElementById('btnToggleFractureAnim');
+            const btnStepFracture = document.getElementById('btnStepFracture');
+            const lblFractureStrokePos = document.getElementById('lblFractureStrokePos');
+            const lblFractureAction = document.getElementById('lblFractureAction');
+
+            // Novos elementos do Gráfico Interativo de Vida Útil e Rebarba
+            const badgeToolLifeRegime = document.getElementById('badgeToolLifeRegime');
+            const kpiLifeShots = document.getElementById('kpiLifeShots');
+            const kpiLifeSub = document.getElementById('kpiLifeSub');
+            const kpiBurrHeight = document.getElementById('kpiBurrHeight');
+            const kpiBurrStatus = document.getElementById('kpiBurrStatus');
+            const chartClearanceLifeCanvas = document.getElementById('chartClearanceLife');
+            let clearanceLifeChart = null;
+
+            // Parametrização científica (Oehler & SME Tooling para 51CrV4 e=1,76mm)
+            const clearanceSamplePoints = [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18];
+            const lifeDataK = [25, 38, 60, 105, 150, 175, 185, 180, 165, 140, 110, 85, 65, 50, 40, 32, 25];
+            const burrDataUm = [24, 20, 17, 15, 13, 12, 11, 13, 16, 22, 32, 45, 58, 72, 85, 96, 110];
+
+            function getClearanceMetrics(cl) {
+                const c = Math.max(2, Math.min(18, cl));
+                const idx = Math.min(clearanceSamplePoints.length - 2, Math.max(0, Math.floor(c) - 2));
+                const frac = c - (idx + 2);
+                const nextIdx = Math.min(clearanceSamplePoints.length - 1, idx + 1);
+
+                const lifeK = lifeDataK[idx] + (lifeDataK[nextIdx] - lifeDataK[idx]) * frac;
+                const burr = burrDataUm[idx] + (burrDataUm[nextIdx] - burrDataUm[idx]) * frac;
+                return {
+                    lifeK: Number(lifeK.toFixed(1)),
+                    lifeShots: Math.round(lifeK * 1000),
+                    burrUm: Math.round(burr)
+                };
+            }
+
+            // Plugin de Zonas Sombreadas e Linha LSE de Rebarba
+            const clearanceZonePlugin = {
+                id: 'clearanceZones',
+                beforeDraw(chart) {
+                    const { ctx, chartArea, scales } = chart;
+                    if (!chartArea || !scales.x || !scales.y1) return;
+                    const { top, bottom, left, right } = chartArea;
+                    const { x, y1 } = scales;
+
+                    ctx.save();
+
+                    // 1. Zona Vermelha: Segundo Cisalhamento (< 5%)
+                    const x2 = x.getPixelForValue(2);
+                    const x5 = x.getPixelForValue(5);
+                    ctx.fillStyle = 'rgba(239, 68, 68, 0.09)';
+                    ctx.fillRect(x2, top, x5 - x2, bottom - top);
+
+                    // 2. Zona Verde/Teal: Faixa Ótima Bihler (5% a 10%)
+                    const x10 = x.getPixelForValue(10);
+                    ctx.fillStyle = 'rgba(20, 184, 166, 0.12)';
+                    ctx.fillRect(x5, top, x10 - x5, bottom - top);
+
+                    // 3. Zona Âmbar: Rebarba Excessiva (> 10%)
+                    const x18 = x.getPixelForValue(18);
+                    ctx.fillStyle = 'rgba(245, 158, 11, 0.08)';
+                    ctx.fillRect(x10, top, x18 - x10, bottom - top);
+
+                    // Linha Limite LSE Rebarba (35 µm)
+                    const yLSE = y1.getPixelForValue(35);
+                    if (yLSE >= top && yLSE <= bottom) {
+                        ctx.strokeStyle = 'rgba(245, 158, 11, 0.75)';
+                        ctx.lineWidth = 1.3;
+                        ctx.setLineDash([4, 3]);
+                        ctx.beginPath();
+                        ctx.moveTo(left, yLSE);
+                        ctx.lineTo(right, yLSE);
+                        ctx.stroke();
+
+                        ctx.fillStyle = 'rgba(245, 158, 11, 0.95)';
+                        ctx.font = "bold 8.5px 'JetBrains Mono', monospace";
+                        ctx.textAlign = 'right';
+                        ctx.fillText('LSE: 35 µm', right - 4, yLSE - 3);
+                    }
+
+                    // Títulos das zonas no topo
+                    ctx.font = "bold 8px 'JetBrains Mono', monospace";
+                    ctx.textAlign = 'center';
+                    ctx.fillStyle = 'rgba(239, 68, 68, 0.8)';
+                    ctx.fillText('2º Cisalham.', (x2 + x5) / 2, top + 10);
+                    ctx.fillStyle = 'rgba(20, 184, 166, 0.95)';
+                    ctx.fillText('Ótimo Bihler', (x5 + x10) / 2, top + 10);
+                    ctx.fillStyle = 'rgba(245, 158, 11, 0.85)';
+                    ctx.fillText('Rebarba Alta', (x10 + x18) / 2, top + 10);
+
+                    ctx.restore();
+                }
+            };
+
+            function initClearanceLifeChart() {
+                if (!chartClearanceLifeCanvas) return;
+                const c = getThemeColors();
+                const initialCl = parseFloat(slClearancePct.value);
+                const initialMetrics = getClearanceMetrics(initialCl);
+
+                const lifePoints = clearanceSamplePoints.map((x, i) => ({ x, y: lifeDataK[i] }));
+                const burrPoints = clearanceSamplePoints.map((x, i) => ({ x, y: burrDataUm[i] }));
+
+                clearanceLifeChart = new Chart(chartClearanceLifeCanvas.getContext('2d'), {
+                    type: 'line',
+                    plugins: [clearanceZonePlugin],
+                    data: {
+                        datasets: [
+                            {
+                                label: 'Vida Útil (k golpes)',
+                                data: lifePoints,
+                                borderColor: c.teal,
+                                backgroundColor: 'rgba(20, 184, 166, 0.16)',
+                                borderWidth: 2.2,
+                                fill: true,
+                                tension: 0.35,
+                                pointRadius: 0,
+                                yAxisID: 'y'
+                            },
+                            {
+                                label: 'Altura da Rebarba (µm)',
+                                data: burrPoints,
+                                borderColor: c.amber,
+                                backgroundColor: 'transparent',
+                                borderWidth: 2,
+                                fill: false,
+                                tension: 0.35,
+                                pointRadius: 0,
+                                yAxisID: 'y1'
+                            },
+                            {
+                                label: 'Ponto Atual: Vida Útil',
+                                data: [{ x: initialCl, y: initialMetrics.lifeK }],
+                                pointRadius: 6.5,
+                                pointHoverRadius: 8.5,
+                                pointBackgroundColor: '#2DD4BF',
+                                pointBorderColor: '#FFFFFF',
+                                pointBorderWidth: 2,
+                                showLine: false,
+                                yAxisID: 'y'
+                            },
+                            {
+                                label: 'Ponto Atual: Rebarba',
+                                data: [{ x: initialCl, y: initialMetrics.burrUm }],
+                                pointRadius: 6.5,
+                                pointHoverRadius: 8.5,
+                                pointBackgroundColor: '#F59E0B',
+                                pointBorderColor: '#FFFFFF',
+                                pointBorderWidth: 2,
+                                showLine: false,
+                                yAxisID: 'y1'
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        interaction: {
+                            intersect: false,
+                            mode: 'index'
+                        },
+                        scales: {
+                            x: {
+                                type: 'linear',
+                                min: 2,
+                                max: 18,
+                                ticks: {
+                                    stepSize: 2,
+                                    color: c.muted,
+                                    font: { family: 'JetBrains Mono', size: 9 },
+                                    callback: v => `${v}%`
+                                },
+                                grid: { color: c.grid }
+                            },
+                            y: {
+                                position: 'left',
+                                min: 0,
+                                max: 220,
+                                ticks: {
+                                    stepSize: 50,
+                                    color: c.teal,
+                                    font: { family: 'JetBrains Mono', size: 8.5 },
+                                    callback: v => `${v}k`
+                                },
+                                grid: { color: c.grid }
+                            },
+                            y1: {
+                                position: 'right',
+                                min: 0,
+                                max: 120,
+                                ticks: {
+                                    stepSize: 30,
+                                    color: c.amber,
+                                    font: { family: 'JetBrains Mono', size: 8.5 },
+                                    callback: v => `${v}µm`
+                                },
+                                grid: { display: false }
+                            }
+                        },
+                        plugins: {
+                            legend: {
+                                display: true,
+                                position: 'top',
+                                labels: {
+                                    color: c.text,
+                                    boxWidth: 10,
+                                    font: { family: 'JetBrains Mono', size: 8.5 },
+                                    filter: (item) => item.text.startsWith('Vida') || item.text.startsWith('Altura')
+                                }
+                            },
+                            tooltip: {
+                                callbacks: {
+                                    label: function(ctx) {
+                                        if (ctx.datasetIndex === 0) return `Vida Útil: ${Math.round(ctx.parsed.y * 1000).toLocaleString('pt-BR')} golpes`;
+                                        if (ctx.datasetIndex === 1) return `Rebarba: ${Math.round(ctx.parsed.y)} µm`;
+                                        return null;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+
+                updateClearanceChartAndKpis(initialCl);
+            }
+
+            function updateClearanceChartAndKpis(cl) {
+                if (!kpiLifeShots) return;
+                const metrics = getClearanceMetrics(cl);
+
+                // Atualizar KPIs
+                kpiLifeShots.textContent = metrics.lifeShots.toLocaleString('pt-BR');
+                kpiBurrHeight.textContent = `${metrics.burrUm} µm`;
+
+                if (cl < 5.0) {
+                    badgeToolLifeRegime.className = 'px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-red-500/15 text-red-400 border border-red-500/30';
+                    badgeToolLifeRegime.textContent = 'Alerta: 2º Cisalhamento & Desgaste';
+                    kpiLifeShots.className = 'text-xl font-mono font-extrabold text-red-400';
+                    kpiLifeSub.className = 'text-[10px] font-mono text-red-400 font-bold block mt-0.5';
+                    kpiLifeSub.textContent = 'Queda Severa de Vida Útil (-80%)';
+                    kpiBurrStatus.className = 'text-[10px] font-mono text-cae-amber font-bold block mt-0.5';
+                    kpiBurrStatus.textContent = 'Atrito Excessivo nas Navalhas';
+                } else if (cl <= 10.0) {
+                    badgeToolLifeRegime.className = 'px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-emerald-500/15 text-cae-teal border border-cae-teal/30';
+                    badgeToolLifeRegime.textContent = 'Faixa Ótima Bihler (Pico de Vida)';
+                    kpiLifeShots.className = 'text-xl font-mono font-extrabold text-cae-teal';
+                    kpiLifeSub.className = 'text-[10px] font-mono text-cae-teal font-bold block mt-0.5';
+                    kpiLifeSub.textContent = 'Pico de Longevidade (Faixa Ideal)';
+                    kpiBurrStatus.className = 'text-[10px] font-mono text-cae-teal font-bold block mt-0.5';
+                    kpiBurrStatus.textContent = 'Aprovada Conforme Norma DIN';
+                } else {
+                    badgeToolLifeRegime.className = 'px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-amber-500/15 text-cae-amber border border-cae-amber/30';
+                    badgeToolLifeRegime.textContent = 'Alerta: Rebarba Excessiva (Estouro)';
+                    kpiLifeShots.className = 'text-xl font-mono font-extrabold text-cae-amber';
+                    kpiLifeSub.className = 'text-[10px] font-mono text-cae-amber font-bold block mt-0.5';
+                    kpiLifeSub.textContent = 'Desgaste por Arredondamento';
+                    if (metrics.burrUm > 35) {
+                        kpiBurrStatus.className = 'text-[10px] font-mono text-red-400 font-bold block mt-0.5';
+                        kpiBurrStatus.textContent = 'REPROVADA (Acima do LSE 35 µm)';
+                    } else {
+                        kpiBurrStatus.className = 'text-[10px] font-mono text-cae-amber font-bold block mt-0.5';
+                        kpiBurrStatus.textContent = 'Próxima ao Limite de Tolerância';
+                    }
+                }
+
+                if (clearanceLifeChart) {
+                    clearanceLifeChart.data.datasets[2].data = [{ x: cl, y: metrics.lifeK }];
+                    clearanceLifeChart.data.datasets[3].data = [{ x: cl, y: metrics.burrUm }];
+                    clearanceLifeChart.update('none');
+                }
+
+                if (currentChartMode === 'heatmap') {
+                    drawHeatmapScene();
+                }
+            }
+
+            let fractureAnimRunning = true;
+            let fractureCycleTime = 0.0; // 0.0 a 1.0 (ciclo contínuo de estampagem)
+
+            // CONTROLE DE MODOS DE VISUALIZAÇÃO: CURVA 2D vs. MAPA DE CONTORNO (DOE 250k)
+            const btnModeCurve = document.getElementById('btnModeCurve');
+            const btnModeHeatmap = document.getElementById('btnModeHeatmap');
+            const containerModeCurve = document.getElementById('containerModeCurve');
+            const containerModeHeatmap = document.getElementById('containerModeHeatmap');
+            const chartHeatmapCanvas = document.getElementById('chartHeatmapCanvas');
+            const chartHeatmapCtx = chartHeatmapCanvas ? chartHeatmapCanvas.getContext('2d') : null;
+            const lblModeFooter = document.getElementById('lblModeFooter');
+            let currentChartMode = 'curve'; // 'curve' ou 'heatmap'
+
+            function setChartMode(mode) {
+                currentChartMode = mode;
+                if (mode === 'curve') {
+                    btnModeCurve.className = 'px-2.5 py-1 rounded bg-cae-teal text-cae-bg font-extrabold shadow-sm transition';
+                    btnModeHeatmap.className = 'px-2.5 py-1 rounded text-cae-muted hover:text-cae-text font-bold transition';
+                    containerModeCurve.classList.remove('hidden');
+                    containerModeHeatmap.classList.add('hidden');
+                    lblModeFooter.textContent = 'Folga < 5%: atrito severo derruba 80% da vida útil • Folga > 11%: estouro de rebarba';
+                    if (clearanceLifeChart) clearanceLifeChart.resize();
+                } else {
+                    btnModeHeatmap.className = 'px-2.5 py-1 rounded bg-cae-teal text-cae-bg font-extrabold shadow-sm transition';
+                    btnModeCurve.className = 'px-2.5 py-1 rounded text-cae-muted hover:text-cae-text font-bold transition';
+                    containerModeHeatmap.classList.remove('hidden');
+                    containerModeCurve.classList.add('hidden');
+                    lblModeFooter.textContent = 'Janela de Processo: Folga de 7%–10% mantém a rebarba abaixo do LSE (35 µm) por até 220k ciclos';
+                    resizeHeatmapCanvas();
+                    drawHeatmapScene();
+                }
+            }
+
+            if (btnModeCurve && btnModeHeatmap) {
+                btnModeCurve.addEventListener('click', () => setChartMode('curve'));
+                btnModeHeatmap.addEventListener('click', () => setChartMode('heatmap'));
+            }
+
+            function resizeHeatmapCanvas() {
+                if (!chartHeatmapCanvas) return;
+                const rect = chartHeatmapCanvas.getBoundingClientRect();
+                if (rect.width > 0 && rect.height > 0) {
+                    const dpr = window.devicePixelRatio || 1;
+                    chartHeatmapCanvas.width = rect.width * dpr;
+                    chartHeatmapCanvas.height = rect.height * dpr;
+                    chartHeatmapCtx.setTransform(1, 0, 0, 1, 0, 0);
+                    chartHeatmapCtx.scale(dpr, dpr);
+                }
+            }
+            window.addEventListener('resize', () => {
+                resizeHeatmapCanvas();
+                if (currentChartMode === 'heatmap') drawHeatmapScene();
+            });
+
+            // Matriz Experimental de Rebarba (mm) vs Folga [4..16%] e Ciclos [0..250k]
+            const heatmapFolgas = [4, 6, 8, 10, 12, 14, 16];
+            const heatmapCiclos = [0, 50, 100, 150, 200, 250];
+            const heatmapMatrizZ = [
+                [0.010, 0.012, 0.014, 0.015, 0.020, 0.025, 0.032], // 0 golpes
+                [0.015, 0.014, 0.015, 0.016, 0.022, 0.027, 0.035], // 50k golpes
+                [0.025, 0.018, 0.017, 0.018, 0.025, 0.030, 0.040], // 100k golpes
+                [0.040, 0.028, 0.022, 0.021, 0.029, 0.035, 0.045], // 150k golpes
+                [0.060, 0.045, 0.032, 0.028, 0.035, 0.042, 0.055], // 200k golpes
+                [0.080, 0.065, 0.050, 0.040, 0.045, 0.052, 0.065]  // 250k golpes
+            ];
+
+            function interpolateZ(f, c) {
+                const cf = Math.max(4, Math.min(16, f));
+                const cc = Math.max(0, Math.min(250, c));
+                const u = (cf - 4) / 2;
+                const i = Math.min(5, Math.max(0, Math.floor(u)));
+                const dx = u - i;
+
+                const v = cc / 50;
+                const j = Math.min(4, Math.max(0, Math.floor(v)));
+                const dy = v - j;
+
+                const z00 = heatmapMatrizZ[j][i];
+                const z10 = heatmapMatrizZ[j][i + 1];
+                const z01 = heatmapMatrizZ[j + 1][i];
+                const z11 = heatmapMatrizZ[j + 1][i + 1];
+
+                return z00 * (1 - dx) * (1 - dy) +
+                       z10 * dx * (1 - dy) +
+                       z01 * (1 - dx) * dy +
+                       z11 * dx * dy;
+            }
+
+            function getHeatmapRGB(z) {
+                if (z <= 0.020) {
+                    const t = Math.max(0, (z - 0.010) / (0.020 - 0.010));
+                    return [
+                        Math.round(16 + t * (20 - 16)),
+                        Math.round(185 + t * (184 - 185)),
+                        Math.round(129 + t * (166 - 129)),
+                        210
+                    ];
+                } else if (z <= 0.035) {
+                    const t = (z - 0.020) / (0.035 - 0.020);
+                    return [
+                        Math.round(20 + t * (245 - 20)),
+                        Math.round(184 + t * (158 - 184)),
+                        Math.round(166 + t * (11 - 166)),
+                        220
+                    ];
+                } else if (z <= 0.050) {
+                    const t = (z - 0.035) / (0.050 - 0.035);
+                    return [
+                        Math.round(245 + t * (234 - 245)),
+                        Math.round(158 + t * (88 - 158)),
+                        Math.round(11 + t * (12 - 11)),
+                        230
+                    ];
+                } else {
+                    const t = Math.min(1.0, (z - 0.050) / (0.080 - 0.050));
+                    return [
+                        Math.round(234 + t * (185 - 234)),
+                        Math.round(88 + t * (28 - 88)),
+                        Math.round(12 + t * (28 - 12)),
+                        240
+                    ];
+                }
+            }
+
+            let heatmapOffCanvas = null;
+            let heatmapOffCtx = null;
+
+            function drawHeatmapScene() {
+                if (!chartHeatmapCanvas || !chartHeatmapCtx) return;
+                const rect = chartHeatmapCanvas.getBoundingClientRect();
+                const w = rect.width;
+                const h = rect.height;
+                if (w <= 0 || h <= 0) return;
+
+                const c = getThemeColors();
+                chartHeatmapCtx.clearRect(0, 0, w, h);
+
+                const padL = 36;
+                const padR = 54;
+                const padT = 16;
+                const padB = 22;
+                const pw = w - padL - padR;
+                const ph = h - padT - padB;
+                if (pw <= 10 || ph <= 10) return;
+
+                // 1. Renderiza superfície contínua via offscreen canvas
+                const offW = 96;
+                const offH = 60;
+                if (!heatmapOffCanvas) {
+                    heatmapOffCanvas = document.createElement('canvas');
+                    heatmapOffCanvas.width = offW;
+                    heatmapOffCanvas.height = offH;
+                    heatmapOffCtx = heatmapOffCanvas.getContext('2d');
+                }
+                const imgData = heatmapOffCtx.createImageData(offW, offH);
+                const d = imgData.data;
+                for (let py = 0; py < offH; py++) {
+                    const cVal = 250 * (1 - py / (offH - 1));
+                    for (let px = 0; px < offW; px++) {
+                        const fVal = 4 + 12 * (px / (offW - 1));
+                        const z = interpolateZ(fVal, cVal);
+                        const [r, g, b, a] = getHeatmapRGB(z);
+                        const idx = (py * offW + px) * 4;
+                        d[idx] = r;
+                        d[idx + 1] = g;
+                        d[idx + 2] = b;
+                        d[idx + 3] = a;
+                    }
+                }
+                heatmapOffCtx.putImageData(imgData, 0, 0);
+
+                chartHeatmapCtx.save();
+                chartHeatmapCtx.imageSmoothingEnabled = true;
+                chartHeatmapCtx.imageSmoothingQuality = 'high';
+                chartHeatmapCtx.drawImage(heatmapOffCanvas, padL, padT, pw, ph);
+
+                // 2. Traçado de Isolinhas (Contornos de 0,02 mm e 0,035 mm LSE)
+                const isolineLevels = [
+                    { val: 0.020, label: '0,02 (Alvo)', color: 'rgba(255, 255, 255, 0.75)', dash: [] },
+                    { val: 0.035, label: '0,035 (LSE)', color: 'rgba(255, 255, 255, 0.95)', dash: [4, 3], isLSE: true },
+                    { val: 0.050, label: '0,05 mm', color: 'rgba(255, 200, 200, 0.7)', dash: [2, 2] }
+                ];
+
+                isolineLevels.forEach(iso => {
+                    chartHeatmapCtx.beginPath();
+                    chartHeatmapCtx.strokeStyle = iso.color;
+                    chartHeatmapCtx.lineWidth = iso.isLSE ? 2 : 1.2;
+                    chartHeatmapCtx.setLineDash(iso.dash);
+
+                    let started = false;
+                    let midPt = null;
+                    const steps = 30;
+                    for (let s = 0; s <= steps; s++) {
+                        const f = 4 + (s / steps) * 12;
+                        let low = 0, high = 250, cSol = 250;
+                        for (let it = 0; it < 12; it++) {
+                            const mid = (low + high) / 2;
+                            const zMid = interpolateZ(f, mid);
+                            if (zMid < iso.val) low = mid;
+                            else high = mid;
+                        }
+                        cSol = (low + high) / 2;
+                        if (cSol >= 0 && cSol <= 250) {
+                            const xPx = padL + ((f - 4) / 12) * pw;
+                            const yPx = padT + (1 - cSol / 250) * ph;
+                            if (!started) {
+                                chartHeatmapCtx.moveTo(xPx, yPx);
+                                started = true;
+                            } else {
+                                chartHeatmapCtx.lineTo(xPx, yPx);
+                            }
+                            if (s === Math.floor(steps * 0.45)) midPt = { x: xPx, y: yPx };
+                        }
+                    }
+                    chartHeatmapCtx.stroke();
+                    chartHeatmapCtx.setLineDash([]);
+
+                    // Etiqueta da isolinha
+                    if (midPt) {
+                        chartHeatmapCtx.fillStyle = '#FFFFFF';
+                        chartHeatmapCtx.font = "bold 8px 'JetBrains Mono', monospace";
+                        chartHeatmapCtx.textAlign = 'center';
+                        chartHeatmapCtx.fillText(iso.label, midPt.x, Math.max(padT + 10, midPt.y - 3));
+                    }
+                });
+
+                // 3. Eixos e Grade
+                chartHeatmapCtx.strokeStyle = c.border;
+                chartHeatmapCtx.lineWidth = 1;
+                chartHeatmapCtx.strokeRect(padL, padT, pw, ph);
+
+                // Rótulos do Eixo X (Folga %)
+                chartHeatmapCtx.fillStyle = c.muted;
+                chartHeatmapCtx.font = "bold 8.5px 'JetBrains Mono', monospace";
+                chartHeatmapCtx.textAlign = 'center';
+                heatmapFolgas.forEach(f => {
+                    const xPx = padL + ((f - 4) / 12) * pw;
+                    chartHeatmapCtx.fillText(`${f}%`, xPx, padT + ph + 14);
+                });
+
+                // Rótulos do Eixo Y (Ciclos em milhares)
+                chartHeatmapCtx.textAlign = 'right';
+                heatmapCiclos.forEach(cy => {
+                    const yPx = padT + (1 - cy / 250) * ph;
+                    chartHeatmapCtx.fillText(cy === 0 ? '0' : `${cy}k`, padL - 4, yPx + 3);
+                });
+
+                // Títulos dos Eixos
+                chartHeatmapCtx.font = "bold 8px 'JetBrains Mono', monospace";
+                chartHeatmapCtx.fillStyle = c.teal;
+                chartHeatmapCtx.textAlign = 'left';
+                chartHeatmapCtx.fillText('▲ Ciclos', 2, padT - 5);
+                chartHeatmapCtx.textAlign = 'right';
+                chartHeatmapCtx.fillText('Folga % ▶', padL + pw, padT + ph + 20);
+
+                // 4. Colorbar Lateral Direita
+                const barX = padL + pw + 10;
+                const barW = 8;
+                const gradBar = chartHeatmapCtx.createLinearGradient(0, padT + ph, 0, padT);
+                gradBar.addColorStop(0.0, 'rgb(16, 185, 129)'); // 0.010
+                gradBar.addColorStop(0.18, 'rgb(20, 184, 166)'); // 0.020
+                gradBar.addColorStop(0.42, 'rgb(245, 158, 11)'); // 0.035
+                gradBar.addColorStop(0.68, 'rgb(234, 88, 12)'); // 0.050
+                gradBar.addColorStop(1.0, 'rgb(185, 28, 28)');  // 0.080
+                chartHeatmapCtx.fillStyle = gradBar;
+                chartHeatmapCtx.fillRect(barX, padT, barW, ph);
+                chartHeatmapCtx.strokeStyle = c.border;
+                chartHeatmapCtx.strokeRect(barX, padT, barW, ph);
+
+                // Ticks da Colorbar
+                chartHeatmapCtx.fillStyle = c.muted;
+                chartHeatmapCtx.font = "7.5px 'JetBrains Mono', monospace";
+                chartHeatmapCtx.textAlign = 'left';
+                const barTicks = [
+                    { v: 0.010, label: '0.01', yRel: 0 },
+                    { v: 0.020, label: '0.02', yRel: 0.18 },
+                    { v: 0.035, label: '0.035', yRel: 0.42, isLSE: true },
+                    { v: 0.050, label: '0.05', yRel: 0.68 },
+                    { v: 0.080, label: '0.08', yRel: 1.0 }
+                ];
+                barTicks.forEach(bt => {
+                    const ty = padT + (1 - bt.yRel) * ph;
+                    chartHeatmapCtx.fillStyle = bt.isLSE ? c.amber : c.muted;
+                    chartHeatmapCtx.fillText(bt.label, barX + barW + 3, ty + 2.5);
+                });
+
+                // 5. MIRA LASER DINÂMICA DA FOLGA ATUAL (Sincronizada com o Slider!)
+                const currCl = parseFloat(slClearancePct.value);
+                if (currCl >= 4.0 && currCl <= 16.0) {
+                    const laserX = padL + ((currCl - 4) / 12) * pw;
+
+                    // Encontra ciclo onde cruza o LSE (0,035 mm)
+                    let lseCycle = 250;
+                    for (let cy = 0; cy <= 250; cy += 5) {
+                        if (interpolateZ(currCl, cy) >= 0.035) {
+                            lseCycle = cy;
+                            break;
+                        }
+                    }
+                    const lseY = padT + (1 - lseCycle / 250) * ph;
+
+                    chartHeatmapCtx.save();
+                    // Linha laser vertical
+                    chartHeatmapCtx.strokeStyle = '#2DD4BF';
+                    chartHeatmapCtx.lineWidth = 1.8;
+                    chartHeatmapCtx.shadowColor = 'rgba(45, 212, 191, 0.8)';
+                    chartHeatmapCtx.shadowBlur = 6;
+                    chartHeatmapCtx.setLineDash([3, 2]);
+                    chartHeatmapCtx.beginPath();
+                    chartHeatmapCtx.moveTo(laserX, padT);
+                    chartHeatmapCtx.lineTo(laserX, padT + ph);
+                    chartHeatmapCtx.stroke();
+                    chartHeatmapCtx.restore();
+
+                    // Ponto de cruzamento do LSE (limite útil de ciclos)
+                    chartHeatmapCtx.save();
+                    chartHeatmapCtx.beginPath();
+                    chartHeatmapCtx.arc(laserX, lseY, 4.5, 0, Math.PI * 2);
+                    chartHeatmapCtx.fillStyle = '#FFFFFF';
+                    chartHeatmapCtx.fill();
+                    chartHeatmapCtx.strokeStyle = '#F59E0B';
+                    chartHeatmapCtx.lineWidth = 2;
+                    chartHeatmapCtx.stroke();
+
+                    // Rótulo da mira
+                    chartHeatmapCtx.fillStyle = '#2DD4BF';
+                    chartHeatmapCtx.font = "bold 8.5px 'JetBrains Mono', monospace";
+                    chartHeatmapCtx.textAlign = laserX > padL + pw * 0.7 ? 'right' : 'left';
+                    const tagX = laserX > padL + pw * 0.7 ? laserX - 6 : laserX + 6;
+                    chartHeatmapCtx.fillText(`Folga ${currCl.toFixed(1)}%`, tagX, padT + 12);
+                    chartHeatmapCtx.fillStyle = '#F59E0B';
+                    chartHeatmapCtx.fillText(`LSE: ~${lseCycle}k ciclos`, tagX, lseY - 4);
+                    chartHeatmapCtx.restore();
+                }
+
+                chartHeatmapCtx.restore();
+            }
+
+            function resizeFractureCanvas() {
+                const rect = fractureCanvas.getBoundingClientRect();
+                if (rect.width > 0 && rect.height > 0) {
+                    const dpr = window.devicePixelRatio || 1;
+                    fractureCanvas.width = rect.width * dpr;
+                    fractureCanvas.height = rect.height * dpr;
+                    fractureCtx.setTransform(1, 0, 0, 1, 0, 0);
+                    fractureCtx.scale(dpr, dpr);
+                }
+            }
+            window.addEventListener('resize', resizeFractureCanvas);
+            resizeFractureCanvas();
+
+            btnToggleFractureAnim.addEventListener('click', () => {
+                fractureAnimRunning = !fractureAnimRunning;
+                btnToggleFractureAnim.textContent = fractureAnimRunning ? '⏸ Pausar' : '▶ Animar Corte';
+            });
+
+            btnStepFracture.addEventListener('click', () => {
+                fractureAnimRunning = false;
+                btnToggleFractureAnim.textContent = '▶ Animar Corte';
+                fractureCycleTime = (fractureCycleTime + 0.10) % 1.0;
+                drawFractureScene(fractureCycleTime);
+            });
+
+            slClearancePct.addEventListener('input', () => {
+                const cl = parseFloat(slClearancePct.value);
+                drawFractureScene(fractureCycleTime);
+                updateClearanceChartAndKpis(cl);
+            });
+
+            function drawFractureScene(t) {
+                const rect = fractureCanvas.getBoundingClientRect();
+                const w = rect.width;
+                const h = rect.height;
+                if (w <= 0 || h <= 0) return;
+
+                const c = getThemeColors();
+                const clPct = parseFloat(slClearancePct.value);
+                fillClearancePct.style.width = `${((clPct - 2) / (18 - 2)) * 100}%`;
+
+                // Status da folga
+                let statusText = 'Ideal';
+                let clearanceColor = c.teal;
+                if (clPct < 5) {
+                    statusText = 'Muito Apertada (Atrito Alto)';
+                    clearanceColor = c.danger;
+                    badgeClearanceStatus.className = 'px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-red-500/15 text-red-400 border border-red-500/30';
+                    badgeClearanceStatus.textContent = 'Folga Apertada (Rebarba Alta)';
+                } else if (clPct <= 10) {
+                    statusText = 'Ideal Bihler (Trincas Alinhadas)';
+                    clearanceColor = c.teal;
+                    badgeClearanceStatus.className = 'px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-emerald-500/15 text-cae-teal border border-cae-teal/30';
+                    badgeClearanceStatus.textContent = 'Folga Ideal (Vida Útil Máxima)';
+                } else {
+                    statusText = 'Excessiva (Estouro Aberto)';
+                    clearanceColor = c.amber;
+                    badgeClearanceStatus.className = 'px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-amber-500/15 text-cae-amber border border-cae-amber/30';
+                    badgeClearanceStatus.textContent = 'Folga Excessiva (Estouro Aberto)';
+                }
+                valClearancePct.textContent = `${clPct.toFixed(1)}% (${(clPct * 0.0176).toFixed(2)} mm) • ${statusText}`;
+
+                // Limpeza do canvas
+                fractureCtx.clearRect(0, 0, w, h);
+
+                // Grid sutil no fundo
+                fractureCtx.strokeStyle = c.grid;
+                fractureCtx.lineWidth = 1;
+                fractureCtx.setLineDash([4, 4]);
+                for (let gy = 25; gy < h; gy += 30) {
+                    fractureCtx.beginPath();
+                    fractureCtx.moveTo(0, gy);
+                    fractureCtx.lineTo(w, gy);
+                    fractureCtx.stroke();
+                }
+                fractureCtx.setLineDash([]);
+
+                // GEOMETRIA PRINCIPAL
+                const cx = w * 0.48;
+                const punchW = Math.min(136, Math.max(96, w * 0.28));
+                const stripThicknessPx = 36; // Representa chapa e = 1,76 mm
+                const stripTopY = h * 0.38;
+                const stripBotY = stripTopY + stripThicknessPx;
+
+                // Folga lateral em pixels (escala visual)
+                const clSidePx = 3 + (clPct / 18) * 14;
+                const dieLeftX = cx - punchW / 2 - clSidePx;
+                const dieRightX = cx + punchW / 2 + clSidePx;
+
+                // FASES DA ANIMAÇÃO (t: 0.0 a 1.0)
+                let punchY = stripTopY - 45;
+                let slugY = stripTopY;
+                let slugOffset = 0;
+                let rolloverProg = 0;
+                let burnishProg = 0;
+                let crackProg = 0;
+                let slugSeparated = false;
+                let slugLockedInTooth = false;
+                let bihlerDiePenMm = 0;
+
+                if (t < 0.18) {
+                    // FASE 1: Aproximação Livre
+                    const p = t / 0.18;
+                    punchY = (stripTopY - 48) + p * 48;
+                    slugY = stripTopY;
+                    badgeFracturePhase.textContent = 'Fase 1: Aproximação Livre';
+                    badgeFracturePhase.className = 'px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-cae-bg text-cae-muted border border-cae-border';
+                    lblFractureAction.textContent = 'Descida Livre ao P.M.S.';
+                    lblFractureAction.className = 'text-cae-muted font-bold';
+                    lblFractureStrokePos.textContent = 'Penetração: 0,00 mm';
+                } else if (t < 0.38) {
+                    // FASE 2: Contato & Deformação Plástica (Rollover ~0,35e)
+                    const p = (t - 0.18) / 0.20;
+                    rolloverProg = p;
+                    const penMm = p * 0.30 * 1.76;
+                    punchY = stripTopY + p * 7;
+                    slugY = stripTopY + p * 3;
+                    badgeFracturePhase.textContent = 'Fase 2: Deformação Plástica (Rollover ~0,35·e)';
+                    badgeFracturePhase.className = 'px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-amber-500/15 text-cae-amber border border-cae-amber/30';
+                    lblFractureAction.textContent = 'Arredondamento Plástico';
+                    lblFractureAction.className = 'text-cae-amber font-bold';
+                    lblFractureStrokePos.textContent = `Penetração: ${penMm.toFixed(2)} mm`;
+                } else if (t < 0.58) {
+                    // FASE 3: Penetração & Faixa Polida (Burnish Band)
+                    const p = (t - 0.38) / 0.20;
+                    rolloverProg = 1;
+                    burnishProg = p;
+                    const penMm = 0.53 + p * 0.65;
+                    punchY = stripTopY + 7 + p * 13;
+                    slugY = stripTopY + 3 + p * 11;
+                    badgeFracturePhase.textContent = 'Fase 3: Cisalhamento & Faixa Polida (Burnish)';
+                    badgeFracturePhase.className = 'px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-emerald-500/15 text-cae-teal border border-cae-teal/30';
+                    lblFractureAction.textContent = 'Corte Cisalhado (Espelho)';
+                    lblFractureAction.className = 'text-cae-teal font-bold';
+                    lblFractureStrokePos.textContent = `Penetração: ${penMm.toFixed(2)} mm`;
+                } else if (t < 0.74) {
+                    // FASE 4: Propagação de Trincas & Fratura Total
+                    const p = (t - 0.58) / 0.16;
+                    rolloverProg = 1;
+                    burnishProg = 1;
+                    crackProg = p;
+                    slugSeparated = true;
+                    punchY = stripTopY + 20 + p * 16;
+                    slugOffset = 14 + p * 16;
+                    slugY = stripTopY + slugOffset;
+                    badgeFracturePhase.textContent = 'Fase 4: Propagação de Trincas & Fratura';
+                    badgeFracturePhase.className = 'px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-sky-500/15 text-sky-400 border border-sky-500/30';
+                    lblFractureAction.textContent = clPct <= 10 ? 'Fratura Alinhada (Limpa)' : 'Estouro & Formação de Rebarba';
+                    lblFractureAction.className = clPct <= 10 ? 'text-cae-teal font-bold' : 'text-cae-danger font-bold';
+                    lblFractureStrokePos.textContent = 'Penetração: 1,76 mm (Fratura Total)';
+                } else if (t < 0.88) {
+                    // FASE 5: P.M.I. Bihler (Penetração Limite 0,50mm) & Trava-Cavaco 6,5°
+                    const p = (t - 0.74) / 0.14;
+                    rolloverProg = 1;
+                    burnishProg = 1;
+                    crackProg = 1;
+                    slugSeparated = true;
+                    slugLockedInTooth = true;
+                    bihlerDiePenMm = Math.min(0.50, p * 0.50);
+                    punchY = stripBotY + (bihlerDiePenMm / 0.50) * 9; // penetração do punção na matriz <= 0,5mm
+                    slugOffset = 30 + p * 8;
+                    slugY = stripTopY + slugOffset;
+                    badgeFracturePhase.textContent = 'Fase 5: P.M.I. (0,50mm) & Trava-Cavaco 6,5°';
+                    badgeFracturePhase.className = 'px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-amber-500/20 text-cae-amber border border-cae-amber/40';
+                    lblFractureAction.textContent = 'Trava-Cavaco Engatado (Anti-Slug Pulling)';
+                    lblFractureAction.className = 'text-cae-amber font-extrabold';
+                    lblFractureStrokePos.textContent = `Penetr. Matriz: ${bihlerDiePenMm.toFixed(2)} mm (≤ 0,50 mm)`;
+                } else {
+                    // FASE 6: Retorno do Punção ao P.M.S. & Cavaco Retido com Segurança
+                    const p = (t - 0.88) / 0.12;
+                    rolloverProg = 1;
+                    burnishProg = 1;
+                    crackProg = 1;
+                    slugSeparated = true;
+                    slugLockedInTooth = p < 0.7;
+                    punchY = (stripBotY + 9) - p * (stripThicknessPx + 52);
+                    slugOffset = 38 + (p > 0.7 ? (p - 0.7) * 45 : 0);
+                    slugY = stripTopY + slugOffset;
+                    badgeFracturePhase.textContent = 'Fase 6: Retorno do Punção (Cavaco Retido)';
+                    badgeFracturePhase.className = 'px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-cae-bg text-cae-teal border border-cae-teal/30';
+                    lblFractureAction.textContent = 'Punção Subindo Livre (Sem Arraste)';
+                    lblFractureAction.className = 'text-cae-teal font-bold';
+                    lblFractureStrokePos.textContent = 'Retorno ao P.M.S.';
+                }
+
+                // 1. DESENHO DAS MATRIZES (ESQUERDA E DIREITA) COM TRAVA-CAVACO 6,5°
+                const dieLandH = 14; // canal reto da matriz
+                const toothDepth = 4.5; // dente trava-cavaco usinado por EDM
+                const toothHeight = 12;
+
+                // Matriz Esquerda
+                fractureCtx.fillStyle = c.surface;
+                fractureCtx.strokeStyle = c.border;
+                fractureCtx.lineWidth = 1.4;
+                fractureCtx.beginPath();
+                fractureCtx.moveTo(0, stripBotY);
+                fractureCtx.lineTo(dieLeftX, stripBotY); // canto cortante superior
+                fractureCtx.lineTo(dieLeftX, stripBotY + dieLandH); // canal reto de corte
+                // Dente Trava-Cavaco 6,5° com alívio oposto
+                fractureCtx.lineTo(dieLeftX - toothDepth, stripBotY + dieLandH + toothHeight);
+                fractureCtx.lineTo(dieLeftX - 1.5, stripBotY + dieLandH + toothHeight + 2); // degrau reto
+                fractureCtx.lineTo(dieLeftX - 7, h); // alívio cônico de saída (0,75°)
+                fractureCtx.lineTo(0, h);
+                fractureCtx.closePath();
+                fractureCtx.fill();
+                fractureCtx.stroke();
+
+                // Matriz Direita
+                fractureCtx.beginPath();
+                fractureCtx.moveTo(w, stripBotY);
+                fractureCtx.lineTo(dieRightX, stripBotY);
+                fractureCtx.lineTo(dieRightX, stripBotY + dieLandH);
+                // Dente Trava-Cavaco 6,5° direito
+                fractureCtx.lineTo(dieRightX + toothDepth, stripBotY + dieLandH + toothHeight);
+                fractureCtx.lineTo(dieRightX + 1.5, stripBotY + dieLandH + toothHeight + 2);
+                fractureCtx.lineTo(dieRightX + 7, h);
+                fractureCtx.lineTo(w, h);
+                fractureCtx.closePath();
+                fractureCtx.fill();
+                fractureCtx.stroke();
+
+                // Destaque visual do dente Trava-Cavaco (6,5°)
+                fractureCtx.save();
+                fractureCtx.strokeStyle = c.amber;
+                fractureCtx.lineWidth = 2;
+                // Chanfro esquerdo
+                fractureCtx.beginPath();
+                fractureCtx.moveTo(dieLeftX, stripBotY + dieLandH);
+                fractureCtx.lineTo(dieLeftX - toothDepth, stripBotY + dieLandH + toothHeight);
+                fractureCtx.lineTo(dieLeftX - 1.5, stripBotY + dieLandH + toothHeight + 2);
+                fractureCtx.stroke();
+                // Chanfro direito
+                fractureCtx.beginPath();
+                fractureCtx.moveTo(dieRightX, stripBotY + dieLandH);
+                fractureCtx.lineTo(dieRightX + toothDepth, stripBotY + dieLandH + toothHeight);
+                fractureCtx.lineTo(dieRightX + 1.5, stripBotY + dieLandH + toothHeight + 2);
+                fractureCtx.stroke();
+                fractureCtx.restore();
+
+                // 2. DESENHO DA CHAPA METÁLICA (FITA 51CrV4)
+                const stripGrad = fractureCtx.createLinearGradient(0, stripTopY, 0, stripBotY);
+                stripGrad.addColorStop(0, '#D97706');
+                stripGrad.addColorStop(0.5, '#F59E0B');
+                stripGrad.addColorStop(1, '#B45309');
+
+                // Chapa Esquerda (Apoiada sobre a matriz)
+                fractureCtx.fillStyle = stripGrad;
+                fractureCtx.strokeStyle = '#090E17';
+                fractureCtx.lineWidth = 1;
+                fractureCtx.beginPath();
+                fractureCtx.moveTo(0, stripTopY);
+                // Arredondamento do rollover superior esquerdo da fita
+                const rollRx = rolloverProg * 5;
+                fractureCtx.lineTo(dieLeftX - rollRx, stripTopY);
+                fractureCtx.quadraticCurveTo(dieLeftX, stripTopY, dieLeftX, stripTopY + rollRx);
+                // Parede vertical / fraturada do furo da fita
+                fractureCtx.lineTo(dieLeftX, stripBotY);
+                fractureCtx.lineTo(0, stripBotY);
+                fractureCtx.closePath();
+                fractureCtx.fill();
+                fractureCtx.stroke();
+
+                // Faixa polida na borda do furo da fita (esquerda)
+                if (burnishProg > 0) {
+                    fractureCtx.fillStyle = c.teal;
+                    fractureCtx.fillRect(dieLeftX - 2.5, stripTopY + rollRx, 2.5, burnishProg * 14);
+                }
+
+                // Chapa Direita
+                fractureCtx.fillStyle = stripGrad;
+                fractureCtx.beginPath();
+                fractureCtx.moveTo(w, stripTopY);
+                fractureCtx.lineTo(dieRightX + rollRx, stripTopY);
+                fractureCtx.quadraticCurveTo(dieRightX, stripTopY, dieRightX, stripTopY + rollRx);
+                fractureCtx.lineTo(dieRightX, stripBotY);
+                fractureCtx.lineTo(w, stripBotY);
+                fractureCtx.closePath();
+                fractureCtx.fill();
+                fractureCtx.stroke();
+
+                // Faixa polida na borda do furo da fita (direita)
+                if (burnishProg > 0) {
+                    fractureCtx.fillStyle = c.teal;
+                    fractureCtx.fillRect(dieRightX, stripTopY + rollRx, 2.5, burnishProg * 14);
+                }
+
+                // 3. DESENHO DO RETALHO (SLUG EM CISALHAMENTO OU DESTAQUE)
+                const slugLeft = cx - punchW / 2;
+                const slugRight = cx + punchW / 2;
+                fractureCtx.fillStyle = stripGrad;
+                fractureCtx.beginPath();
+                // Bordo superior com rollover do retalho
+                fractureCtx.moveTo(slugLeft + rollRx, slugY);
+                fractureCtx.lineTo(slugRight - rollRx, slugY);
+                fractureCtx.quadraticCurveTo(slugRight, slugY, slugRight, slugY + rollRx);
+                // Bordo lateral direito
+                fractureCtx.lineTo(slugRight, slugY + stripThicknessPx);
+                // Rebarba no retalho se folga for grande ou apertada
+                if (slugSeparated && clPct > 10) {
+                    fractureCtx.lineTo(slugRight + 3.5, slugY + stripThicknessPx - 3);
+                }
+                fractureCtx.lineTo(slugLeft, slugY + stripThicknessPx);
+                if (slugSeparated && clPct > 10) {
+                    fractureCtx.lineTo(slugLeft - 3.5, slugY + stripThicknessPx - 3);
+                }
+                fractureCtx.lineTo(slugLeft, slugY + rollRx);
+                fractureCtx.quadraticCurveTo(slugLeft, slugY, slugLeft + rollRx, slugY);
+                fractureCtx.closePath();
+                fractureCtx.fill();
+                fractureCtx.stroke();
+
+                // Faixas polidas nas laterais do retalho
+                if (burnishProg > 0) {
+                    fractureCtx.fillStyle = c.teal;
+                    fractureCtx.fillRect(slugLeft, slugY + rollRx, 2.5, burnishProg * 14);
+                    fractureCtx.fillRect(slugRight - 2.5, slugY + rollRx, 2.5, burnishProg * 14);
+                }
+
+                // 4. PROPAGAÇÃO DAS TRINCAS DE CISALHAMENTO (ANIMAÇÃO DA FRATURA)
+                if (crackProg > 0 && !slugLockedInTooth) {
+                    fractureCtx.save();
+                    fractureCtx.lineWidth = 2.2;
+                    fractureCtx.setLineDash([3, 2]);
+
+                    if (clPct < 5) {
+                        // Folga Apertada: Trincas desalinhadas (segundo cisalhamento / desgaste)
+                        fractureCtx.strokeStyle = c.danger;
+                        // Trinca esquerda do punção descendo reto
+                        fractureCtx.beginPath();
+                        fractureCtx.moveTo(slugLeft, punchY);
+                        fractureCtx.lineTo(slugLeft + 2, punchY + crackProg * 14);
+                        fractureCtx.stroke();
+                        // Trinca da matriz subindo desalinhada
+                        fractureCtx.beginPath();
+                        fractureCtx.moveTo(dieLeftX, stripBotY);
+                        fractureCtx.lineTo(dieLeftX - 2, stripBotY - crackProg * 14);
+                        fractureCtx.stroke();
+                        // Destaque de micro-rebarba
+                        fractureCtx.fillStyle = c.danger;
+                        fractureCtx.fillRect(dieLeftX, stripBotY - 2, 4, 3);
+                    } else if (clPct <= 10) {
+                        // Folga Ideal: Trincas convergem perfeitamente no plano de corte
+                        fractureCtx.strokeStyle = c.teal;
+                        // Esquerda
+                        fractureCtx.beginPath();
+                        fractureCtx.moveTo(slugLeft, punchY);
+                        fractureCtx.lineTo(
+                            slugLeft + (dieLeftX - slugLeft) * crackProg,
+                            punchY + (stripBotY - punchY) * crackProg
+                        );
+                        fractureCtx.stroke();
+                        // Direita
+                        fractureCtx.beginPath();
+                        fractureCtx.moveTo(slugRight, punchY);
+                        fractureCtx.lineTo(
+                            slugRight + (dieRightX - slugRight) * crackProg,
+                            punchY + (stripBotY - punchY) * crackProg
+                        );
+                        fractureCtx.stroke();
+                    } else {
+                        // Folga Excessiva: Grande ângulo de fratura e rebarba saliente
+                        fractureCtx.strokeStyle = c.amber;
+                        fractureCtx.beginPath();
+                        fractureCtx.moveTo(slugLeft, punchY);
+                        fractureCtx.quadraticCurveTo(slugLeft - 6, punchY + 12, dieLeftX, stripBotY);
+                        fractureCtx.stroke();
+                        fractureCtx.beginPath();
+                        fractureCtx.moveTo(slugRight, punchY);
+                        fractureCtx.quadraticCurveTo(slugRight + 6, punchY + 12, dieRightX, stripBotY);
+                        fractureCtx.stroke();
+                        // Rebarba projetada
+                        fractureCtx.fillStyle = c.danger;
+                        fractureCtx.fillRect(dieRightX - 3, stripBotY, 4, 6);
+                        fractureCtx.fillRect(dieLeftX - 1, stripBotY, 4, 6);
+                    }
+                    fractureCtx.restore();
+                }
+
+                // 5. DESENHO DO PUNÇÃO DE CORTE (DESCENDO / SUBINDO)
+                const punchTop = 8;
+                const punchH = punchY - punchTop;
+                if (punchH > 0) {
+                    const punchGrad = fractureCtx.createLinearGradient(cx - punchW/2, 0, cx + punchW/2, 0);
+                    punchGrad.addColorStop(0, '#0D9488');
+                    punchGrad.addColorStop(0.5, '#14B8A6');
+                    punchGrad.addColorStop(1, '#0F766E');
+
+                    fractureCtx.fillStyle = punchGrad;
+                    fractureCtx.fillRect(cx - punchW / 2, punchTop, punchW, punchH);
+                    fractureCtx.strokeStyle = '#090E17';
+                    fractureCtx.lineWidth = 1.5;
+                    fractureCtx.strokeRect(cx - punchW / 2, punchTop, punchW, punchH);
+
+                    // Arestas vivas do punção (linha inferior cortante)
+                    fractureCtx.strokeStyle = c.teal;
+                    fractureCtx.lineWidth = 2.5;
+                    fractureCtx.beginPath();
+                    fractureCtx.moveTo(cx - punchW / 2, punchY);
+                    fractureCtx.lineTo(cx + punchW / 2, punchY);
+                    fractureCtx.stroke();
+
+                    // Rótulo dentro do punção
+                    fractureCtx.fillStyle = '#FFFFFF';
+                    fractureCtx.font = "bold 10px 'JetBrains Mono', monospace";
+                    fractureCtx.textAlign = 'center';
+                    fractureCtx.fillText('PUNÇÃO BIHLER (P.M.I. ≤ 0,5mm)', cx, punchTop + Math.min(30, punchH / 2));
+                }
+
+                // 6. EFEITO VISUAL: ENGATE NO TRAVA-CAVACO 6,5°
+                if (slugLockedInTooth) {
+                    fractureCtx.save();
+                    fractureCtx.fillStyle = c.amber;
+                    fractureCtx.font = "bold 9.5px 'JetBrains Mono', monospace";
+                    fractureCtx.textAlign = 'center';
+                    fractureCtx.fillText('▼ TRAVA-CAVACO ATIVADO (6,5°): RETALHO PRESO ▼', cx, stripBotY + dieLandH + toothHeight + 14);
+
+                    // Setas de retenção mecânica nas bordas do retalho
+                    fractureCtx.strokeStyle = c.amber;
+                    fractureCtx.lineWidth = 2.5;
+                    // Seta esquerda
+                    fractureCtx.beginPath();
+                    fractureCtx.moveTo(dieLeftX - toothDepth - 8, stripBotY + dieLandH + 6);
+                    fractureCtx.lineTo(dieLeftX - toothDepth + 2, stripBotY + dieLandH + 6);
+                    fractureCtx.lineTo(dieLeftX - toothDepth - 2, stripBotY + dieLandH + 2);
+                    fractureCtx.stroke();
+                    // Seta direita
+                    fractureCtx.beginPath();
+                    fractureCtx.moveTo(dieRightX + toothDepth + 8, stripBotY + dieLandH + 6);
+                    fractureCtx.lineTo(dieRightX + toothDepth - 2, stripBotY + dieLandH + 6);
+                    fractureCtx.lineTo(dieRightX + toothDepth + 2, stripBotY + dieLandH + 2);
+                    fractureCtx.stroke();
+                    fractureCtx.restore();
+                }
+
+                // 7. COTAS E ANOTAÇÕES TÉCNICAS NO CANVAS
+                fractureCtx.font = "bold 8.5px 'JetBrains Mono', monospace";
+
+                // Legendas das 3 zonas (Lado Esquerdo)
+                fractureCtx.textAlign = 'right';
+                fractureCtx.fillStyle = c.amber;
+                fractureCtx.fillText('1ª Zona: Rollover (~0,35·e)', dieLeftX - 16, stripTopY + 8);
+                fractureCtx.fillStyle = c.teal;
+                fractureCtx.fillText('2ª Zona: Faixa Polida', dieLeftX - 16, stripTopY + 20);
+                fractureCtx.fillStyle = clearanceColor;
+                fractureCtx.fillText('3ª Zona: Fratura / Rebarba', dieLeftX - 16, stripTopY + 32);
+
+                // Linha de cota da folga (Lado Direito)
+                fractureCtx.textAlign = 'left';
+                fractureCtx.fillStyle = clearanceColor;
+                fractureCtx.fillText(`Folga Fc: ${clPct.toFixed(1)}% (${(clPct * 0.0176).toFixed(2)}mm)`, dieRightX + 14, stripTopY + 12);
+                fractureCtx.fillStyle = c.amber;
+                fractureCtx.fillText('Dente Trava-Cavaco (6,5° Oposto)', dieRightX + toothDepth + 8, stripBotY + dieLandH + 5);
+                fractureCtx.fillStyle = c.muted;
+                fractureCtx.fillText('Ptc = 65%·Fc | Degrau 0,02-0,05mm', dieRightX + toothDepth + 8, stripBotY + dieLandH + 15);
+
+                // Cota de Penetração na Matriz (Limite Bihler)
+                if (bihlerDiePenMm > 0) {
+                    fractureCtx.fillStyle = c.teal;
+                    fractureCtx.fillText(`Penetr. PMI: ${bihlerDiePenMm.toFixed(2)} mm (≤ 0,50 mm máx)`, cx + punchW / 2 + 12, stripBotY + 28);
+                }
+            }
+
+            function loopFracture() {
+                if (fractureAnimRunning) {
+                    fractureCycleTime = (fractureCycleTime + 0.0035) % 1.0;
+                }
+                drawFractureScene(fractureCycleTime);
+                requestAnimationFrame(loopFracture);
+            }
+            requestAnimationFrame(loopFracture);
+
+            themeToggle.addEventListener('click', () => {
+                const next = htmlEl.getAttribute('data-theme') === 'light' ? 'dark' : 'light';
+                htmlEl.setAttribute('data-theme', next);
+                localStorage.setItem('rv_theme', next);
+                syncThemeUi();
+                calculateForces();
+                drawFractureScene(fractureCycleTime);
+                const c = getThemeColors();
+                if (clearanceLifeChart) {
+                    clearanceLifeChart.options.scales.x.ticks.color = c.muted;
+                    clearanceLifeChart.options.scales.x.grid.color = c.grid;
+                    clearanceLifeChart.options.scales.y.grid.color = c.grid;
+                    clearanceLifeChart.options.plugins.legend.labels.color = c.text;
+                    clearanceLifeChart.update('none');
+                }
+                if (currentChartMode === 'heatmap') {
+                    drawHeatmapScene();
+                }
+            });
+
+            syncThemeUi();
+            updateStrokeUi();
+            calculateForces();
+            resizeFractureCanvas();
+            drawFractureScene(fractureCycleTime);
+            initClearanceLifeChart();
+            resizeHeatmapCanvas();
+        })();
+    </script>
+</body>
+</html>

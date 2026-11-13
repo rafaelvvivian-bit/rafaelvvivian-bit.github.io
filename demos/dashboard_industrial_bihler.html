@@ -1,0 +1,1047 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard Industrial - Bihler GRM-NC</title>
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <!-- Configuração do Design System (Paleta 2: CAE / von Mises Spectrum) -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        cae: {
+                            bg: 'var(--cae-bg)',
+                            surface: 'var(--cae-surface)',
+                            text: 'var(--cae-text)',
+                            muted: 'var(--cae-muted)',
+                            teal: 'var(--cae-teal)',
+                            teal_hover: 'var(--cae-teal-hover)',
+                            amber: 'var(--cae-amber)',
+                            border: 'var(--cae-border)'
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['"Plus Jakarta Sans"', 'sans-serif'],
+                        mono: ['"JetBrains Mono"', 'monospace']
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        :root,
+        [data-theme="dark"] {
+            --cae-bg: #090E17;
+            --cae-surface: #131E31;
+            --cae-panel-bg: rgba(19, 30, 49, 0.72);
+            --cae-text: #F1F5F9;
+            --cae-muted: #94A3B8;
+            --cae-primary: #14B8A6;
+            --cae-teal: #14B8A6;
+            --cae-teal-hover: #2DD4BF;
+            --cae-amber: #F59E0B;
+            --cae-border: rgba(241, 245, 249, 0.12);
+            --cae-track: rgba(241, 245, 249, 0.1);
+            --cae-grid: rgba(241, 245, 249, 0.06);
+            --cae-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.35);
+            --cae-slider-grad-start: #0F3D5E;
+            --cae-slider-grad-end: #14B8A6;
+        }
+
+        [data-theme="light"] {
+            --cae-bg: #F6F7F9;
+            --cae-surface: #FFFFFF;
+            --cae-panel-bg: rgba(255, 255, 255, 0.92);
+            --cae-text: #0F172A;
+            --cae-muted: #64748B;
+            --cae-primary: #0F3D5E;
+            --cae-teal: #0D9488;
+            --cae-teal-hover: #15527C;
+            --cae-amber: #D97706;
+            --cae-border: rgba(15, 23, 42, 0.14);
+            --cae-track: rgba(15, 23, 42, 0.12);
+            --cae-grid: rgba(15, 23, 42, 0.08);
+            --cae-shadow: 0 12px 32px -8px rgba(15, 23, 42, 0.09);
+            --cae-slider-grad-start: #0F3D5E;
+            --cae-slider-grad-end: #0D9488;
+        }
+
+        body {
+            background-color: var(--cae-bg);
+            color: var(--cae-text);
+            background-image: radial-gradient(circle at top right, rgba(20, 184, 166, 0.06), transparent 40%),
+                              radial-gradient(circle at bottom left, rgba(245, 158, 11, 0.04), transparent 40%);
+            overflow-x: hidden;
+            transition: background-color 0.25s ease, color 0.25s ease;
+        }
+
+        .glass-panel {
+            background: var(--cae-panel-bg);
+            backdrop-filter: blur(12px);
+            border: 1px solid var(--cae-border);
+            box-shadow: var(--cae-shadow);
+            border-radius: 16px;
+        }
+
+        /* --- CONTROLES DESLIZANTES --- */
+        .hmi-slider-container { position: relative; padding: 6px 0; }
+        input[type=range] {
+            -webkit-appearance: none; width: 100%; background: transparent; position: relative; z-index: 5;
+        }
+        input[type=range]:focus { outline: none; }
+        input[type=range]:focus-visible::-webkit-slider-thumb {
+            box-shadow: 0 0 0 3px var(--cae-surface), 0 0 0 6px var(--cae-amber);
+        }
+        input[type=range]::-webkit-slider-runnable-track {
+            width: 100%; height: 6px; cursor: pointer; background: var(--cae-track); border-radius: 3px;
+        }
+        input[type=range]::-webkit-slider-thumb {
+            height: 20px; width: 20px; border-radius: 50%; background: var(--cae-surface); cursor: pointer;
+            -webkit-appearance: none; margin-top: -7px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.35), 0 0 0 3px var(--cae-surface), 0 0 0 5px var(--cae-teal);
+            transition: transform 0.2s ease;
+        }
+        input[type=range]::-webkit-slider-thumb:hover {
+            transform: scale(1.2); box-shadow: 0 0 15px rgba(20, 184, 166, 0.65), 0 0 0 3px var(--cae-surface), 0 0 0 5px var(--cae-teal-hover);
+        }
+        .slider-fill {
+            position: absolute; top: 12px; left: 0; height: 6px;
+            background: linear-gradient(90deg, var(--cae-slider-grad-start), var(--cae-slider-grad-end));
+            border-radius: 3px; pointer-events: none; transition: width 0.1s linear;
+        }
+
+        /* --- ANIMAÇÃO SVG DA MÁQUINA (Extraída de dashboard-bihler-grm.html) --- */
+        .svg-container {
+            background-image: radial-gradient(circle at center, #131E31 0%, #090E17 100%);
+            box-shadow: inset 0 0 30px rgba(0, 0, 0, 0.8);
+            border: 1px solid var(--cae-border);
+            border-radius: 12px; overflow: hidden; position: relative;
+            display: flex; align-items: center; justify-content: center;
+            transition: box-shadow 0.4s ease, border-color 0.4s ease;
+        }
+        .svg-container.glow {
+            box-shadow: 0 0 36px rgba(20, 184, 166, 0.22) inset;
+            border-color: rgba(20, 184, 166, 0.4);
+        }
+        @keyframes punch-le { 0%, 100% { transform: translate(-80px, -20px); } 50% { transform: translate(-30px, -20px); } }
+        @keyframes punch-ld { 0%, 100% { transform: translate(80px, -20px); } 50% { transform: translate(30px, -20px); } }
+        @keyframes punch-top { 0%, 100% { transform: translate(0px, -80px); } 50% { transform: translate(0px, -32px); } }
+        @keyframes feed-wire { 0% { transform: translateY(100px); opacity: 1; } 40% { transform: translateY(0); opacity: 1; } 60% { opacity: 0; } 100% { transform: translateY(100px); opacity: 0; } }
+        @keyframes form-part { 0%, 45% { opacity: 0; transform: scale(0.5); } 50%, 90% { opacity: 1; transform: scale(1); stroke: #F59E0B; } 100% { opacity: 0; transform: translateY(50px); } }
+
+        .anim-punch-le { animation: punch-le 3s infinite ease-in-out; }
+        .anim-punch-ld { animation: punch-ld 3s infinite ease-in-out; }
+        .anim-punch-top { animation: punch-top 3s infinite ease-in-out; }
+        .anim-wire { animation: feed-wire 3s infinite ease-in-out; }
+        .anim-part { animation: form-part 3s infinite ease-in-out; }
+
+        .fast-mode .anim-punch-le,
+        .fast-mode .anim-punch-ld,
+        .fast-mode .anim-punch-top,
+        .fast-mode .anim-wire,
+        .fast-mode .anim-part {
+            animation-duration: 1.2s;
+        }
+        .paused .anim-punch-le,
+        .paused .anim-punch-ld,
+        .paused .anim-punch-top,
+        .paused .anim-wire,
+        .paused .anim-part {
+            animation-play-state: paused;
+        }
+        
+        .pulse-light { animation: pulse-ring 2s cubic-bezier(0.215, 0.61, 0.355, 1) infinite; }
+        @keyframes pulse-ring { 0% { opacity: 1; } 100% { opacity: 0.2; } }
+    </style>
+</head>
+<body class="min-h-screen p-3 md:p-4 flex flex-col font-sans">
+
+    <!-- HEADER -->
+    <header class="glass-panel px-5 py-2.5 mb-3.5 flex flex-wrap justify-between items-center gap-3">
+        <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-lg bg-cae-surface border border-cae-border flex items-center justify-center shadow-lg relative overflow-hidden">
+                <div class="absolute inset-0 bg-cae-teal/20"></div>
+                <svg class="w-5 h-5 text-cae-teal relative z-10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path></svg>
+            </div>
+            <div>
+                <h1 class="text-lg md:text-xl font-extrabold text-cae-text tracking-tight uppercase">Dashboard Executivo de Engenharia</h1>
+                <p class="text-cae-teal font-mono text-[11px] md:text-xs mt-0.5 uppercase tracking-widest">Otimização de Ferramental Bihler GRM-NC</p>
+            </div>
+        </div>
+        <div class="flex items-center gap-3">
+            <a href="../index.html#cases" class="px-2.5 py-1 rounded-lg bg-cae-surface border border-cae-border text-xs font-mono font-bold text-cae-text hover:border-cae-teal transition">
+                ← Portfólio
+            </a>
+            <button type="button" id="themeToggle" aria-label="Alternar tema claro/escuro" class="px-2.5 py-1 rounded-lg bg-cae-surface border border-cae-border text-xs font-mono font-bold text-cae-teal hover:border-cae-teal transition">
+                Tema: Escuro
+            </button>
+            <div class="flex flex-col items-end">
+                <div class="flex items-center gap-2 mb-0.5">
+                    <span class="w-2 h-2 rounded-full bg-cae-teal pulse-light"></span>
+                    <span class="text-[11px] font-bold text-cae-text uppercase tracking-widest" id="status-txt">Sistema Online</span>
+                </div>
+                <div class="font-mono text-[11px] text-cae-amber flex items-center gap-1.5">
+                    OEE <span id="kpi-oee">Monitorando</span>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- GRID PRINCIPAL [PROPORÇÕES TRAVADAS — Ver AGENTS.md Seção 4: Topo 4/8 (anim 195-235px) + Base 6/6 (gráficos min-h 290px)] -->
+    <main class="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-3.5">
+
+        <!-- COLUNA ESQUERDA (Simulador Visual Compacto - 4 Colunas) -->
+        <section class="lg:col-span-4 flex flex-col h-full">
+            <div class="glass-panel p-3.5 flex flex-col h-full">
+                <h2 class="text-xs font-bold text-cae-muted uppercase tracking-widest mb-2.5 flex items-center gap-2">
+                    <svg class="w-4 h-4 text-cae-amber" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                    Cinemática de Dobra Radial
+                </h2>
+                
+                <div id="machine-container" class="machine svg-container w-full flex-1 min-h-[195px] max-h-[235px] relative select-none pointer-events-none mb-2.5">
+                    <svg class="w-full h-full" viewBox="-150 -150 300 300" preserveAspectRatio="xMidYMid meet">
+                        <!-- Background Grid -->
+                        <g stroke="rgba(255,255,255,0.06)" stroke-width="1">
+                            <line x1="-150" y1="0" x2="150" y2="0" />
+                            <line x1="0" y1="-150" x2="0" y2="150" />
+                            <circle cx="0" cy="0" r="50" fill="none" />
+                            <circle cx="0" cy="0" r="100" fill="none" />
+                        </g>
+
+                        <!-- Mandril Central -->
+                        <circle cx="0" cy="0" r="15" fill="#334155" stroke="#94A3B8" stroke-width="2" />
+                        <circle cx="0" cy="0" r="4" fill="#090E17" />
+
+                        <!-- Arame Alimentado -->
+                        <line class="anim-wire" x1="0" y1="150" x2="0" y2="-15" stroke="#CBD5E1" stroke-width="4" />
+
+                        <!-- Peça Formada (Anel) -->
+                        <circle class="anim-part" cx="0" cy="0" r="18" fill="none" stroke-width="4" stroke-linecap="round" stroke-dasharray="80" stroke-dashoffset="10" />
+
+                        <!-- Punção LE (Left) -->
+                        <g class="anim-punch-le">
+                            <path d="M-20,-10 L-60,-20 L-60,20 L-20,10 Z" fill="#0F172A" stroke="#14B8A6" stroke-width="2"/>
+                            <text x="-50" y="4" fill="#14B8A6" font-size="8" font-family="monospace">LE</text>
+                        </g>
+
+                        <!-- Punção LD (Right) -->
+                        <g class="anim-punch-ld">
+                            <path d="M20,-10 L60,-20 L60,20 L20,10 Z" fill="#0F172A" stroke="#14B8A6" stroke-width="2"/>
+                            <text x="35" y="4" fill="#14B8A6" font-size="8" font-family="monospace">LD</text>
+                        </g>
+
+                        <!-- Punção Superior -->
+                        <g class="anim-punch-top">
+                            <path d="M-15,-20 L15,-20 L20,-60 L-20,-60 Z" fill="#0F172A" stroke="#F59E0B" stroke-width="2"/>
+                            <text x="-8" y="-40" fill="#F59E0B" font-size="8" font-family="monospace">TOP</text>
+                        </g>
+                    </svg>
+                </div>
+                
+                <div class="flex justify-between items-center bg-cae-bg px-3 py-2 rounded-lg border border-cae-border">
+                    <span class="text-[11px] font-mono text-cae-muted">Ciclo: <span id="cycle-msg" class="text-cae-teal">Rodando...</span></span>
+                    <label class="flex items-center cursor-pointer gap-2">
+                        <span class="text-[11px] font-bold uppercase">Auto-Loop</span>
+                        <div class="relative">
+                            <input type="checkbox" id="toggle-loop" class="sr-only" checked onchange="toggleCycle(this)">
+                            <div class="block bg-cae-surface border border-cae-border w-10 h-5 rounded-full"></div>
+                            <div class="dot absolute left-1 top-0.5 bg-cae-teal w-4 h-4 rounded-full transition transform translate-x-4"></div>
+                        </div>
+                    </label>
+                </div>
+            </div>
+        </section>
+
+        <!-- COLUNA DIREITA (Painel de KPIs e Variáveis de Entrada - 8 Colunas) -->
+        <section class="lg:col-span-8 flex flex-col gap-3">
+            
+            <!-- Odômetro e KPIs -->
+            <div class="glass-panel px-4 py-3 flex flex-col md:flex-row justify-between items-center gap-4 relative overflow-hidden">
+                <div class="absolute top-0 right-0 w-64 h-64 bg-cae-teal opacity-5 rounded-full blur-[80px] pointer-events-none"></div>
+                
+                <div class="z-10 text-center md:text-left">
+                    <h3 class="text-[11px] font-bold text-cae-muted uppercase tracking-widest mb-0.5">Vida Útil / Produção Projetada</h3>
+                    <div class="flex items-end justify-center md:justify-start gap-2">
+                        <span class="text-3xl md:text-4xl font-mono font-black text-cae-text drop-shadow-[0_0_12px_rgba(20,184,166,0.28)]" id="kpi-vida">80,000</span>
+                        <span class="text-cae-teal font-bold uppercase tracking-widest mb-1 text-xs">Peças</span>
+                    </div>
+                </div>
+
+                <div class="z-10 flex gap-2.5 w-full md:w-auto">
+                    <div class="bg-cae-bg/80 border border-cae-border px-3.5 py-2 rounded-xl flex-1 text-center md:text-right min-w-[105px]">
+                        <span class="block text-[10px] text-cae-muted uppercase font-bold mb-0.5">Ganho de Vida</span>
+                        <span class="text-xl font-mono font-bold text-cae-teal" id="kpi-porcentagem">+0%</span>
+                    </div>
+                    <div class="bg-cae-bg/80 border border-cae-border px-3.5 py-2 rounded-xl flex-1 text-center md:text-right min-w-[115px]">
+                        <span class="block text-[10px] text-cae-muted uppercase font-bold mb-0.5">Equilíbrio (PE)</span>
+                        <span class="text-xl font-mono font-bold text-cae-amber" id="kpi-breakeven">149k</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Variáveis (Sliders Compactos) -->
+            <div class="glass-panel px-4 py-3 flex-1 grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2.5 content-center">
+                <!-- 1 -->
+                <div>
+                    <div class="flex justify-between items-end mb-1">
+                        <label class="text-xs font-bold text-cae-text uppercase flex items-center gap-1">
+                            <svg class="w-3 h-3 text-cae-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                            Acabamento (Punção)
+                        </label>
+                        <span id="val-acabamento" class="font-mono text-cae-teal text-xs font-bold">Ra > 0.8</span>
+                    </div>
+                    <div class="hmi-slider-container">
+                        <div class="slider-fill" id="fill-acabamento" style="width: 0%;"></div>
+                        <input type="range" id="sl-acabamento" min="0" max="100" value="0" oninput="updateSlider(this, 'fill-acabamento')">
+                    </div>
+                </div>
+                <!-- 2 -->
+                <div>
+                    <div class="flex justify-between items-end mb-1">
+                        <label class="text-xs font-bold text-cae-text uppercase flex items-center gap-1">
+                            <svg class="w-3 h-3 text-cae-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                            Refrigeração Retífica
+                        </label>
+                        <span id="val-refrig" class="font-mono text-cae-teal text-xs font-bold">Seco (0%)</span>
+                    </div>
+                    <div class="hmi-slider-container">
+                        <div class="slider-fill" id="fill-refrig" style="width: 0%;"></div>
+                        <input type="range" id="sl-refrig" min="0" max="100" value="0" oninput="updateSlider(this, 'fill-refrig')">
+                    </div>
+                </div>
+                <!-- 3 -->
+                <div>
+                    <div class="flex justify-between items-end mb-1">
+                        <label class="text-xs font-bold text-cae-text uppercase flex items-center gap-1">
+                            <svg class="w-3 h-3 text-cae-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                            Ângulo de Corte
+                        </label>
+                        <span id="val-angulo" class="font-mono text-cae-teal text-xs font-bold">0.0°</span>
+                    </div>
+                    <div class="hmi-slider-container">
+                        <div class="slider-fill" id="fill-angulo" style="width: 0%;"></div>
+                        <input type="range" id="sl-angulo" min="0" max="100" value="0" oninput="updateSlider(this, 'fill-angulo')">
+                    </div>
+                </div>
+                <!-- 4 -->
+                <div>
+                    <div class="flex justify-between items-end mb-1">
+                        <label class="text-xs font-bold text-cae-text uppercase flex items-center gap-1">
+                            <svg class="w-3 h-3 text-cae-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                            Montagem (5S)
+                        </label>
+                        <span id="val-montagem" class="font-mono text-cae-teal text-xs font-bold">Convencional</span>
+                    </div>
+                    <div class="hmi-slider-container">
+                        <div class="slider-fill" id="fill-montagem" style="width: 0%;"></div>
+                        <input type="range" id="sl-montagem" min="0" max="100" value="0" oninput="updateSlider(this, 'fill-montagem')">
+                    </div>
+                </div>
+            </div>
+
+        </section>
+
+        <!-- LINHA INFERIOR: CARTA CEP (6 Colunas) + PONTO DE EQUILÍBRIO (6 Colunas) -->
+        <section class="lg:col-span-6">
+            <div class="glass-panel p-4 h-full min-h-[290px] flex flex-col">
+                <div class="flex flex-wrap justify-between items-center gap-2 mb-2.5">
+                    <h2 class="text-xs font-bold text-cae-text uppercase tracking-widest flex items-center gap-2">
+                        <svg class="w-4 h-4 text-cae-teal" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z"></path></svg>
+                        Carta de Controle (CEP)
+                    </h2>
+                    <span class="text-[10px] font-mono font-bold text-cae-muted bg-cae-bg border border-cae-border px-2 py-0.5 rounded">
+                        LSC / Média / LIC (±3σ)
+                    </span>
+                </div>
+                <div class="relative flex-1 w-full min-h-[225px]">
+                    <canvas id="cepChart"></canvas>
+                </div>
+            </div>
+        </section>
+
+        <section class="lg:col-span-6">
+            <div class="glass-panel p-4 h-full min-h-[290px] flex flex-col">
+                <div class="flex flex-wrap justify-between items-center gap-2 mb-2.5">
+                    <h2 class="text-xs font-bold text-cae-text uppercase tracking-widest flex items-center gap-2">
+                        <svg class="w-4 h-4 text-cae-amber" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path></svg>
+                        Ponto de Equilíbrio (Produção × Custo)
+                    </h2>
+                    <div class="flex flex-wrap items-center gap-1.5 text-[10px] font-mono font-bold">
+                        <span class="text-cae-teal bg-cae-bg border border-cae-border px-2 py-0.5 rounded">
+                            Prod: <span id="be-prod-badge">80.000 pçs • Custo Alto</span>
+                        </span>
+                        <span class="text-cae-amber bg-cae-bg border border-cae-border px-2 py-0.5 rounded" id="be-status-badge">
+                            Custo Alto (Abaixo do PE)
+                        </span>
+                    </div>
+                </div>
+                <div class="relative flex-1 w-full min-h-[225px]">
+                    <canvas id="breakevenChart"></canvas>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <style>
+        /* Estilo dinâmico para o botão de toggle */
+        input:checked + div + .dot { transform: translateX(100%); background-color: var(--cae-teal); }
+        input:not(:checked) + div + .dot { background-color: var(--cae-muted); }
+    </style>
+
+    <script>
+        /* =========================================
+           TEMA (Paleta 2: CAE / von Mises Spectrum)
+        ========================================= */
+        const htmlEl = document.documentElement;
+        const themeToggleBtn = document.getElementById('themeToggle');
+        let currentTheme = localStorage.getItem('rv_theme') || 'dark';
+        htmlEl.setAttribute('data-theme', currentTheme);
+
+        function getThemeColors() {
+            const s = getComputedStyle(htmlEl);
+            return {
+                bg: s.getPropertyValue('--cae-bg').trim(),
+                surface: s.getPropertyValue('--cae-surface').trim(),
+                text: s.getPropertyValue('--cae-text').trim(),
+                muted: s.getPropertyValue('--cae-muted').trim(),
+                primary: s.getPropertyValue('--cae-primary').trim(),
+                teal: s.getPropertyValue('--cae-teal').trim(),
+                amber: s.getPropertyValue('--cae-amber').trim(),
+                grid: s.getPropertyValue('--cae-grid').trim(),
+                border: s.getPropertyValue('--cae-border').trim()
+            };
+        }
+
+        function updateThemeButtonLabel() {
+            if (themeToggleBtn) {
+                themeToggleBtn.textContent = currentTheme === 'dark' ? 'Tema: Escuro' : 'Tema: Claro';
+            }
+        }
+        updateThemeButtonLabel();
+
+        /* =========================================
+           LÓGICA DO GRÁFICO CEP (Chart.js)
+        ========================================= */
+        let cepChart = null;
+
+        function initChart() {
+            const ctx = document.getElementById('cepChart').getContext('2d');
+            const theme = getThemeColors();
+            
+            // Fundo gradiente do gráfico de linha
+            const gradient = ctx.createLinearGradient(0, 0, 0, 300);
+            gradient.addColorStop(0, 'rgba(20, 184, 166, 0.28)');
+            gradient.addColorStop(1, 'rgba(20, 184, 166, 0.0)');
+
+            cepChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: Array.from({length: 15}, (_, i) => `Lote ${i+1}`),
+                    datasets: [
+                        {
+                            label: 'Vida Real (Amostra)',
+                            data: Array(15).fill(80000),
+                            borderColor: theme.teal,
+                            backgroundColor: gradient,
+                            borderWidth: 2,
+                            pointBackgroundColor: theme.bg,
+                            pointBorderColor: theme.teal,
+                            pointBorderWidth: 2,
+                            pointRadius: 4,
+                            pointHoverRadius: 6,
+                            fill: true,
+                            tension: 0.4
+                        },
+                        {
+                            label: 'Média (X)',
+                            data: Array(15).fill(80000),
+                            borderColor: theme.text,
+                            borderWidth: 1,
+                            borderDash: [5, 5],
+                            pointRadius: 0,
+                            fill: false
+                        },
+                        {
+                            label: 'LSC (+3σ)',
+                            data: Array(15).fill(116000), // Base inicial + 3*12000
+                            borderColor: theme.amber,
+                            borderWidth: 1,
+                            borderDash: [2, 4],
+                            pointRadius: 0,
+                            fill: false
+                        },
+                        {
+                            label: 'LIC (-3σ)',
+                            data: Array(15).fill(44000), // Base inicial - 3*12000
+                            borderColor: theme.amber,
+                            borderWidth: 1,
+                            borderDash: [2, 4],
+                            pointRadius: 0,
+                            fill: false
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    animation: {
+                        duration: 800,
+                        easing: 'easeOutQuart'
+                    },
+                    interaction: { mode: 'index', intersect: false },
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            backgroundColor: theme.surface,
+                            titleColor: theme.text,
+                            bodyColor: theme.text,
+                            titleFont: { family: 'Plus Jakarta Sans', size: 12 },
+                            bodyFont: { family: 'JetBrains Mono', size: 11 },
+                            borderColor: theme.border,
+                            borderWidth: 1
+                        }
+                    },
+                    scales: {
+                        y: {
+                            min: 30000,
+                            max: 270000,
+                            grid: { color: theme.grid, drawBorder: false },
+                            ticks: {
+                                font: { family: 'JetBrains Mono', size: 10 },
+                                color: theme.muted,
+                                callback: (v) => (v / 1000) + 'k'
+                            }
+                        },
+                        x: {
+                            grid: { display: false, drawBorder: false },
+                            ticks: { font: { family: 'JetBrains Mono', size: 10 }, color: theme.muted }
+                        }
+                    }
+                }
+            });
+        }
+
+        /* =========================================
+           LÓGICA DOS DADOS E ANIMAÇÃO DOS NÚMEROS
+        ========================================= */
+        const BASE = 80000;
+        let currentLife = 80000;
+        let displayLife = 80000;
+        let animFrame;
+
+        function animateNumber(element, start, end, duration) {
+            let startTime = null;
+            const step = (timestamp) => {
+                if (!startTime) startTime = timestamp;
+                const progress = Math.min((timestamp - startTime) / duration, 1);
+                const ease = progress * (2 - progress); // ease out
+                
+                displayLife = Math.floor(ease * (end - start) + start);
+                element.innerHTML = displayLife.toLocaleString('pt-BR');
+                
+                if (progress < 1) {
+                    animFrame = window.requestAnimationFrame(step);
+                } else {
+                    element.innerHTML = end.toLocaleString('pt-BR');
+                    displayLife = end;
+                }
+            };
+            window.requestAnimationFrame(step);
+        }
+
+        window.updateSlider = function(input, fillId) {
+            document.getElementById(fillId).style.width = input.value + '%';
+            calculateData();
+        }
+
+        function calculateData() {
+            const valAcabamento = parseInt(document.getElementById('sl-acabamento').value);
+            const valRefrig = parseInt(document.getElementById('sl-refrig').value);
+            const valAngulo = parseInt(document.getElementById('sl-angulo').value);
+            const valMontagem = parseInt(document.getElementById('sl-montagem').value);
+
+            // Textos visuais
+            document.getElementById('val-acabamento').textContent = valAcabamento > 75 ? 'Ra < 0.2' : (valAcabamento > 30 ? 'Ra < 0.4' : 'Ra > 0.8');
+            document.getElementById('val-refrig').textContent = valRefrig > 0 ? `${valRefrig}%` : 'Seco';
+            document.getElementById('val-angulo').textContent = `${((valAngulo / 100) * 5).toFixed(1)}°`;
+            document.getElementById('val-montagem').textContent = valMontagem > 50 ? 'Otimizada' : 'Convenc.';
+
+            // Pesos: Total de ganho = 160.000
+            let ganho = 0;
+            ganho += (valAcabamento / 100) * 60000;
+            ganho += (valRefrig / 100) * 40000;
+            ganho += (valAngulo / 100) * 40000;
+            ganho += (valMontagem / 100) * 20000;
+
+            const novaVida = BASE + Math.round(ganho);
+
+            if (novaVida !== currentLife) {
+                cancelAnimationFrame(animFrame);
+                animateNumber(document.getElementById('kpi-vida'), displayLife, novaVida, 800);
+                currentLife = novaVida;
+            }
+
+            // Status OEE
+            const pct = (((novaVida - BASE) / BASE) * 100).toFixed(0);
+            document.getElementById('kpi-porcentagem').textContent = `+${pct}%`;
+            
+            const oeeEl = document.getElementById('kpi-oee');
+            if (novaVida < 120000) { oeeEl.textContent = 'Alerta'; oeeEl.className = 'text-cae-amber'; }
+            else if (novaVida < 200000) { oeeEl.textContent = 'Estável'; oeeEl.className = 'text-cae-text'; }
+            else { oeeEl.textContent = 'Otimizado'; oeeEl.className = 'text-cae-teal'; }
+
+            // Recalcular CEP (Desvio padrão cai conforme a qualidade sobe)
+            // Qualidade vai de 0 a 1
+            const qt = (novaVida - BASE) / 160000;
+            
+            // Base desvio = 12000 (ruim), Ótimo desvio = 2500 (bom)
+            const sigma = 12000 - (qt * (12000 - 2500)); 
+            
+            let amostras = [];
+            for(let i=0; i<15; i++) {
+                // Distribuição Normal (Box-Muller simples)
+                let u=0, v=0; while(u===0) u=Math.random(); while(v===0) v=Math.random();
+                let z = Math.sqrt(-2.0 * Math.log(u)) * Math.cos(2.0 * Math.PI * v);
+                amostras.push(Math.round(novaVida + (z * sigma)));
+            }
+
+            const theme = getThemeColors();
+
+            // Atualiza os 4 datasets do Chart.js
+            cepChart.data.datasets[0].data = amostras; // Dados reais
+            cepChart.data.datasets[0].pointBackgroundColor = theme.bg;
+            cepChart.data.datasets[1].data = Array(15).fill(novaVida); // Média
+            cepChart.data.datasets[1].borderColor = theme.text;
+            cepChart.data.datasets[2].data = Array(15).fill(novaVida + (3 * sigma)); // LSC
+            cepChart.data.datasets[2].borderColor = theme.amber;
+            cepChart.data.datasets[3].data = Array(15).fill(novaVida - (3 * sigma)); // LIC
+            cepChart.data.datasets[3].borderColor = theme.amber;
+            
+            // Ajusta cor da linha baseado no nível usando os tokens da Paleta 2
+            const cor = novaVida > 180000 ? theme.teal : (novaVida < 120000 ? theme.amber : theme.primary);
+            cepChart.data.datasets[0].borderColor = cor;
+            cepChart.data.datasets[0].pointBorderColor = cor;
+
+            cepChart.options.plugins.tooltip.backgroundColor = theme.surface;
+            cepChart.options.plugins.tooltip.titleColor = theme.text;
+            cepChart.options.plugins.tooltip.bodyColor = theme.text;
+            cepChart.options.plugins.tooltip.borderColor = theme.border;
+            cepChart.options.scales.y.grid.color = theme.grid;
+            cepChart.options.scales.y.ticks.color = theme.muted;
+            cepChart.options.scales.x.ticks.color = theme.muted;
+
+            cepChart.update();
+            updateBreakevenChart(novaVida, qt, theme);
+            updateAnimationState(qt);
+        }
+
+        /* =========================================
+           GRÁFICO DE PONTO DE EQUILÍBRIO (Produção × Custo)
+        ========================================= */
+        let breakevenChart = null;
+        let breakevenState = {
+            prodK: 80,
+            prodVal: 10.3,
+            costVal: 88.0,
+            eqX: 149.4,
+            eqY: 27.7,
+            costLabel: 'Custo Alto'
+        };
+
+        function getCostRegimeLabel(qK) {
+            if (qK < 115) return 'Custo Alto';
+            if (qK <= 195) return 'Custo Baixo';
+            return 'Custo Médio-Baixo';
+        }
+
+        function calcProductionValue(qK, qt) {
+            return 10 + 0.0028 * Math.pow(qK - 70, 2) + 0.05 * qt * (qK - 70);
+        }
+
+        function calcCostValue(qK, qt) {
+            const cMin = 23 - 4 * qt;
+            if (qK <= 175) {
+                return cMin + 0.0072 * Math.pow(175 - qK, 2);
+            }
+            return cMin + 0.0045 * Math.pow(qK - 175, 2);
+        }
+
+        function buildBreakevenSeries(qt) {
+            const prodData = [];
+            const costData = [];
+            let eqX = 150;
+            let eqY = 28;
+
+            for (let q = 75; q <= 250; q += 5) {
+                const p = calcProductionValue(q, qt);
+                const c = calcCostValue(q, qt);
+                prodData.push({ x: q, y: Number(p.toFixed(2)) });
+                costData.push({ x: q, y: Number(c.toFixed(2)) });
+
+                if (q > 75) {
+                    const prevP = prodData[prodData.length - 2].y;
+                    const prevC = costData[costData.length - 2].y;
+                    if (prevP < prevC && p >= c) {
+                        const diffPrev = prevC - prevP;
+                        const diffCurr = p - c;
+                        const t = diffPrev / (diffPrev + diffCurr);
+                        eqX = (q - 5) + t * 5;
+                        eqY = prevP + t * (p - prevP);
+                    }
+                }
+            }
+
+            return { prodData, costData, eqX, eqY };
+        }
+
+        const breakevenOverlayPlugin = {
+            id: 'breakevenOverlay',
+            afterDatasetsDraw(chart) {
+                const { ctx, chartArea, scales } = chart;
+                if (!chartArea || !scales.x || !scales.y) return;
+
+                const theme = getThemeColors();
+                const xScale = scales.x;
+                const yScale = scales.y;
+
+                const eqPxX = xScale.getPixelForValue(breakevenState.eqX);
+                const eqPxY = yScale.getPixelForValue(breakevenState.eqY);
+                const prodPxX = xScale.getPixelForValue(breakevenState.prodK);
+                const prodPxY = yScale.getPixelForValue(breakevenState.prodVal);
+                const costPxY = yScale.getPixelForValue(breakevenState.costVal);
+
+                ctx.save();
+
+                // 0. Linhas tracejadas de referência (80k Alto / 150k Baixo / 240k Médio-Baixo)
+                const qtNow = Math.max(0, Math.min(1, (breakevenState.prodK - 80) / 160));
+                const refPoints = [
+                    { q: 80, y: calcCostValue(80, qtNow), label: '80k' },
+                    { q: 150, y: calcCostValue(150, qtNow), label: '150k' },
+                    { q: 240, y: calcCostValue(240, qtNow), label: '240k' }
+                ];
+
+                ctx.setLineDash([3, 4]);
+                ctx.lineWidth = 1;
+                ctx.strokeStyle = theme.border;
+                refPoints.forEach((pt) => {
+                    const px = xScale.getPixelForValue(pt.q);
+                    const py = yScale.getPixelForValue(pt.y);
+                    ctx.beginPath();
+                    ctx.moveTo(chartArea.left, py);
+                    ctx.lineTo(px, py);
+                    ctx.moveTo(px, py);
+                    ctx.lineTo(px, chartArea.bottom);
+                    ctx.stroke();
+
+                    ctx.beginPath();
+                    ctx.arc(px, py, 3, 0, Math.PI * 2);
+                    ctx.fillStyle = theme.amber;
+                    ctx.fill();
+                });
+                ctx.setLineDash([]);
+
+                // 1. Linha vertical indicadora da Produção Atual (variáveis de entrada)
+                ctx.beginPath();
+                ctx.setLineDash([4, 4]);
+                ctx.strokeStyle = theme.teal;
+                ctx.lineWidth = 1.75;
+                ctx.moveTo(prodPxX, chartArea.bottom);
+                ctx.lineTo(prodPxX, chartArea.top + 28);
+                ctx.stroke();
+                ctx.setLineDash([]);
+
+                // Ponto ativo na curva de Produção e na curva de Custo
+                ctx.beginPath();
+                ctx.arc(prodPxX, prodPxY, 5.5, 0, Math.PI * 2);
+                ctx.fillStyle = theme.teal;
+                ctx.fill();
+                ctx.lineWidth = 2;
+                ctx.strokeStyle = theme.surface;
+                ctx.stroke();
+
+                ctx.beginPath();
+                ctx.arc(prodPxX, costPxY, 5, 0, Math.PI * 2);
+                ctx.fillStyle = theme.amber;
+                ctx.fill();
+                ctx.lineWidth = 2;
+                ctx.strokeStyle = theme.surface;
+                ctx.stroke();
+
+                // Badge flutuante no topo indicando a Produção Atual e faixa de Custo
+                const prodLabel = `Prod: ${breakevenState.prodK.toFixed(0)}k (${breakevenState.costLabel})`;
+                ctx.font = '700 10px "JetBrains Mono", monospace';
+                const prodTextW = ctx.measureText(prodLabel).width + 14;
+                const pillX = Math.min(Math.max(prodPxX - prodTextW / 2, chartArea.left + 4), chartArea.right - prodTextW - 4);
+                const pillY = chartArea.top + 6;
+                ctx.fillStyle = theme.surface;
+                ctx.strokeStyle = theme.teal;
+                ctx.lineWidth = 1;
+                ctx.beginPath();
+                ctx.roundRect(pillX, pillY, prodTextW, 20, 6);
+                ctx.fill();
+                ctx.stroke();
+                ctx.fillStyle = theme.teal;
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(prodLabel, pillX + prodTextW / 2, pillY + 10);
+
+                // 2. Ponto de Equilíbrio (interseção)
+                ctx.beginPath();
+                ctx.arc(eqPxX, eqPxY, 6.5, 0, Math.PI * 2);
+                ctx.fillStyle = theme.text;
+                ctx.fill();
+                ctx.lineWidth = 2.5;
+                ctx.strokeStyle = theme.surface;
+                ctx.stroke();
+
+                // Rótulo "Ponto de equilíbrio"
+                const eqLabel = `Ponto de equilíbrio (${breakevenState.eqX.toFixed(0)}k)`;
+                ctx.font = '700 11px "Plus Jakarta Sans", sans-serif';
+                const eqW = ctx.measureText(eqLabel).width;
+                const eqLabelX = Math.min(Math.max(eqPxX, chartArea.left + eqW / 2 + 4), chartArea.right - eqW / 2 - 6);
+                const eqLabelY = Math.max(eqPxY - 14, chartArea.top + 38);
+                ctx.fillStyle = theme.text;
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'bottom';
+                ctx.fillText(eqLabel, eqLabelX, eqLabelY);
+
+                // 3. Rótulos inline das curvas (Produção / Custo)
+                const prodEndY = yScale.getPixelForValue(calcProductionValue(242, qtNow));
+                const costEndY = yScale.getPixelForValue(calcCostValue(242, qtNow));
+
+                ctx.font = '700 11px "Plus Jakarta Sans", sans-serif';
+                ctx.textAlign = 'right';
+                ctx.fillStyle = theme.teal;
+                ctx.fillText('Produção', chartArea.right - 8, Math.max(prodEndY - 8, chartArea.top + 38));
+
+                ctx.fillStyle = theme.amber;
+                ctx.fillText('Custo', chartArea.right - 8, Math.min(costEndY + 15, chartArea.bottom - 8));
+
+                ctx.restore();
+            }
+        };
+
+        function initBreakevenChart() {
+            const ctx = document.getElementById('breakevenChart').getContext('2d');
+            const theme = getThemeColors();
+            const initial = buildBreakevenSeries(0);
+
+            breakevenChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    datasets: [
+                        {
+                            label: 'Produção',
+                            data: initial.prodData,
+                            borderColor: theme.teal,
+                            backgroundColor: 'transparent',
+                            borderWidth: 2.5,
+                            pointRadius: 0,
+                            pointHoverRadius: 5,
+                            tension: 0.35
+                        },
+                        {
+                            label: 'Custo',
+                            data: initial.costData,
+                            borderColor: theme.amber,
+                            backgroundColor: 'transparent',
+                            borderWidth: 2.5,
+                            pointRadius: 0,
+                            pointHoverRadius: 5,
+                            tension: 0.35
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    animation: { duration: 400, easing: 'easeOutQuart' },
+                    interaction: { mode: 'nearest', axis: 'x', intersect: false },
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            backgroundColor: theme.surface,
+                            titleColor: theme.text,
+                            bodyColor: theme.text,
+                            titleFont: { family: 'Plus Jakarta Sans', size: 12 },
+                            bodyFont: { family: 'JetBrains Mono', size: 11 },
+                            borderColor: theme.border,
+                            borderWidth: 1,
+                            callbacks: {
+                                title: (items) => `Produção: ${(items[0].parsed.x * 1000).toLocaleString('pt-BR')} pçs (${getCostRegimeLabel(items[0].parsed.x)})`,
+                                label: (item) => `${item.dataset.label}: ${item.parsed.y.toFixed(1)} pts`,
+                                afterBody: (items) => {
+                                    if (items.length >= 2) {
+                                        const diff = items[0].parsed.y - items[1].parsed.y;
+                                        const sinal = diff >= 0 ? '+' : '';
+                                        return `Saldo (Prod. - Custo): ${sinal}${diff.toFixed(1)} pts`;
+                                    }
+                                    return '';
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            type: 'linear',
+                            min: 75,
+                            max: 250,
+                            title: {
+                                display: true,
+                                text: 'Unidades (peças)',
+                                color: theme.muted,
+                                font: { family: 'Plus Jakarta Sans', size: 11, weight: '600' }
+                            },
+                            grid: { color: theme.grid, drawBorder: false },
+                            ticks: {
+                                stepSize: 20,
+                                font: { family: 'JetBrains Mono', size: 10 },
+                                color: theme.muted,
+                                callback: (v) => `${v}k`
+                            }
+                        },
+                        y: {
+                            min: 0,
+                            max: 110,
+                            title: {
+                                display: true,
+                                text: 'Custo / Produção',
+                                color: theme.muted,
+                                font: { family: 'Plus Jakarta Sans', size: 11, weight: '600' }
+                            },
+                            grid: { color: theme.grid, drawBorder: false },
+                            ticks: {
+                                stepSize: 20,
+                                font: { family: 'JetBrains Mono', size: 10 },
+                                color: theme.muted,
+                                callback: (v) => {
+                                    if (v === 20) return 'Baixo';
+                                    if (v === 40) return 'Méd-Bx';
+                                    if (v === 80) return 'Alto';
+                                    return v;
+                                }
+                            }
+                        }
+                    }
+                },
+                plugins: [breakevenOverlayPlugin]
+            });
+        }
+
+        function updateBreakevenChart(novaVida, qt, theme) {
+            if (!breakevenChart) return;
+            const series = buildBreakevenSeries(qt);
+            const prodK = novaVida / 1000;
+            const prodVal = calcProductionValue(prodK, qt);
+            const costVal = calcCostValue(prodK, qt);
+            const costLabel = getCostRegimeLabel(prodK);
+
+            breakevenState = {
+                prodK,
+                prodVal,
+                costVal,
+                eqX: series.eqX,
+                eqY: series.eqY,
+                costLabel
+            };
+
+            breakevenChart.data.datasets[0].data = series.prodData;
+            breakevenChart.data.datasets[0].borderColor = theme.teal;
+            breakevenChart.data.datasets[1].data = series.costData;
+            breakevenChart.data.datasets[1].borderColor = theme.amber;
+
+            breakevenChart.options.plugins.tooltip.backgroundColor = theme.surface;
+            breakevenChart.options.plugins.tooltip.titleColor = theme.text;
+            breakevenChart.options.plugins.tooltip.bodyColor = theme.text;
+            breakevenChart.options.plugins.tooltip.borderColor = theme.border;
+            breakevenChart.options.scales.x.grid.color = theme.grid;
+            breakevenChart.options.scales.x.ticks.color = theme.muted;
+            breakevenChart.options.scales.x.title.color = theme.muted;
+            breakevenChart.options.scales.y.grid.color = theme.grid;
+            breakevenChart.options.scales.y.ticks.color = theme.muted;
+            breakevenChart.options.scales.y.title.color = theme.muted;
+
+            breakevenChart.update();
+
+            document.getElementById('kpi-breakeven').textContent = `${Math.round(series.eqX)}k`;
+            document.getElementById('be-prod-badge').textContent = `${novaVida.toLocaleString('pt-BR')} pçs • ${costLabel}`;
+
+            const statusBadge = document.getElementById('be-status-badge');
+            if (prodK >= series.eqX) {
+                statusBadge.textContent = `${costLabel} (Acima do PE)`;
+                statusBadge.className = 'text-cae-teal bg-cae-bg border border-cae-border px-2 py-1 rounded';
+            } else {
+                statusBadge.textContent = `${costLabel} (Abaixo do PE)`;
+                statusBadge.className = 'text-cae-amber bg-cae-bg border border-cae-border px-2 py-1 rounded';
+            }
+        }
+
+        /* =========================================
+           LÓGICA DA ANIMAÇÃO SVG (CINEMÁTICA LE/LD/TOP)
+        ========================================= */
+        const machine = document.getElementById('machine-container');
+        const msg = document.getElementById('cycle-msg');
+        let isLooping = true;
+        let isFastMode = false;
+
+        function updateAnimationState(qt) {
+            isFastMode = qt >= 0.75;
+            if (isFastMode) {
+                machine.classList.add('fast-mode', 'glow');
+            } else {
+                machine.classList.remove('fast-mode', 'glow');
+            }
+            if (isLooping) {
+                msg.textContent = isFastMode ? 'Alta Cadência (1.2s)' : 'Ciclo Contínuo (3.0s)';
+            }
+        }
+
+        window.toggleCycle = function(checkbox) {
+            isLooping = checkbox.checked;
+            if (isLooping) {
+                machine.classList.remove('paused');
+                msg.textContent = isFastMode ? 'Alta Cadência (1.2s)' : 'Ciclo Contínuo (3.0s)';
+            } else {
+                machine.classList.add('paused');
+                msg.textContent = 'Pausado';
+            }
+        }
+
+        if (themeToggleBtn) {
+            themeToggleBtn.addEventListener('click', () => {
+                currentTheme = currentTheme === 'dark' ? 'light' : 'dark';
+                htmlEl.setAttribute('data-theme', currentTheme);
+                localStorage.setItem('rv_theme', currentTheme);
+                updateThemeButtonLabel();
+                if (cepChart) calculateData();
+            });
+        }
+
+        // Inicialização global
+        window.onload = () => {
+            initChart();
+            initBreakevenChart();
+            ['montagem', 'acabamento', 'refrig', 'angulo'].forEach(id => {
+                document.getElementById(`fill-${id}`).style.width = '0%';
+            });
+            // Inicia os gráficos e animação com os valores zerados
+            calculateData();
+        };
+
+    </script>
+</body>
+</html>

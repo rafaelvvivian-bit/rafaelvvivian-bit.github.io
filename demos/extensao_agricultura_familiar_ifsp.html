@@ -1,0 +1,688 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Inovação para Agricultura Familiar (14º CONICT IFSP) | Rafael Vivian</title>
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        cae: {
+                            bg: 'var(--cae-bg)',
+                            surface: 'var(--cae-surface)',
+                            text: 'var(--cae-text)',
+                            muted: 'var(--cae-muted)',
+                            teal: 'var(--cae-teal)',
+                            teal_hover: 'var(--cae-teal-hover)',
+                            amber: 'var(--cae-amber)',
+                            border: 'var(--cae-border)'
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['"Plus Jakarta Sans"', 'sans-serif'],
+                        mono: ['"JetBrains Mono"', 'monospace']
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        :root,
+        [data-theme="dark"] {
+            --cae-bg: #090E17;
+            --cae-surface: #131E31;
+            --cae-panel-bg: rgba(19, 30, 49, 0.72);
+            --cae-text: #F1F5F9;
+            --cae-muted: #94A3B8;
+            --cae-primary: #14B8A6;
+            --cae-teal: #14B8A6;
+            --cae-teal-hover: #2DD4BF;
+            --cae-amber: #F59E0B;
+            --cae-border: rgba(241, 245, 249, 0.12);
+            --cae-track: rgba(241, 245, 249, 0.1);
+            --cae-grid: rgba(241, 245, 249, 0.07);
+            --cae-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.35);
+            --cae-slider-grad-start: #0F3D5E;
+            --cae-slider-grad-end: #14B8A6;
+        }
+
+        [data-theme="light"] {
+            --cae-bg: #F6F7F9;
+            --cae-surface: #FFFFFF;
+            --cae-panel-bg: rgba(255, 255, 255, 0.92);
+            --cae-text: #0F172A;
+            --cae-muted: #64748B;
+            --cae-primary: #0F3D5E;
+            --cae-teal: #0D9488;
+            --cae-teal-hover: #15527C;
+            --cae-amber: #D97706;
+            --cae-border: rgba(15, 23, 42, 0.14);
+            --cae-track: rgba(15, 23, 42, 0.12);
+            --cae-grid: rgba(15, 23, 42, 0.09);
+            --cae-shadow: 0 12px 32px -8px rgba(15, 23, 42, 0.09);
+            --cae-slider-grad-start: #0F3D5E;
+            --cae-slider-grad-end: #0D9488;
+        }
+
+        body {
+            background-color: var(--cae-bg);
+            color: var(--cae-text);
+            background-image: radial-gradient(circle at top right, rgba(20, 184, 166, 0.06), transparent 40%),
+                              radial-gradient(circle at bottom left, rgba(245, 158, 11, 0.04), transparent 40%);
+            overflow-x: hidden;
+            transition: background-color 0.25s ease, color 0.25s ease;
+        }
+
+        .glass-panel {
+            background: var(--cae-panel-bg);
+            backdrop-filter: blur(12px);
+            border: 1px solid var(--cae-border);
+            box-shadow: var(--cae-shadow);
+            border-radius: 16px;
+        }
+
+        .dim-btn.active {
+            border-color: var(--cae-teal);
+            background-color: rgba(20, 184, 166, 0.14);
+            color: var(--cae-teal);
+        }
+
+        .hmi-slider-container { position: relative; padding: 6px 0; }
+        input[type=range] {
+            -webkit-appearance: none; width: 100%; background: transparent; position: relative; z-index: 5;
+        }
+        input[type=range]:focus { outline: none; }
+        input[type=range]::-webkit-slider-runnable-track {
+            width: 100%; height: 6px; cursor: pointer; background: var(--cae-track); border-radius: 3px;
+        }
+        input[type=range]::-webkit-slider-thumb {
+            height: 18px; width: 18px; border-radius: 50%; background: var(--cae-surface); cursor: pointer;
+            -webkit-appearance: none; margin-top: -6px;
+            box-shadow: 0 0 8px rgba(0, 0, 0, 0.35), 0 0 0 3px var(--cae-surface), 0 0 0 5px var(--cae-teal);
+        }
+        .slider-fill {
+            position: absolute; top: 12px; left: 0; height: 6px;
+            background: linear-gradient(90deg, var(--cae-slider-grad-start), var(--cae-slider-grad-end));
+            border-radius: 3px; pointer-events: none; transition: width 0.08s linear;
+        }
+    </style>
+</head>
+<body class="min-h-screen p-3 md:p-4 flex flex-col font-sans">
+
+    <!-- HEADER -->
+    <header class="glass-panel px-5 py-2.5 mb-3.5 flex flex-wrap justify-between items-center gap-3">
+        <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-lg bg-cae-surface border border-cae-border flex items-center justify-center shadow-lg relative overflow-hidden">
+                <div class="absolute inset-0 bg-cae-teal/20"></div>
+                <svg class="w-5 h-5 text-cae-teal relative z-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+                </svg>
+            </div>
+            <div>
+                <h1 class="text-lg md:text-xl font-extrabold text-cae-text tracking-tight uppercase">Engenharia de Produção &amp; Agricultura Familiar</h1>
+                <p class="text-cae-teal font-mono text-[11px] md:text-xs mt-0.5 uppercase tracking-widest">14º CONICT IFSP 2023 (Coautor) • Edital PRX_182 • Iperó – SP</p>
+            </div>
+        </div>
+        <div class="flex items-center gap-3">
+            <a href="../index.html#cases" class="px-2.5 py-1 rounded-lg bg-cae-surface border border-cae-border text-xs font-mono font-bold text-cae-text hover:border-cae-teal transition">
+                ← Portfólio
+            </a>
+            <button type="button" id="themeToggle" aria-label="Alternar tema claro/escuro" class="px-2.5 py-1 rounded-lg bg-cae-surface border border-cae-border text-xs font-mono font-bold text-cae-teal hover:border-cae-teal transition">
+                Tema: Escuro
+            </button>
+        </div>
+    </header>
+
+    <!-- GRID PRINCIPAL -->
+    <main class="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-3.5">
+
+        <!-- COLUNA SUPERIOR ESQUERDA: KPIs DO ESTUDO + CRONOGRAMA GANTT (4 Colunas) -->
+        <section class="lg:col-span-4 flex flex-col gap-3">
+            <div class="glass-panel p-3.5 flex flex-col justify-between h-full gap-3">
+                <div class="grid grid-cols-2 gap-2">
+                    <div class="bg-cae-bg/80 border border-cae-border rounded-xl px-3 py-2">
+                        <span class="block text-[10px] text-cae-muted uppercase font-bold">Público-Alvo (Iperó)</span>
+                        <span class="text-lg font-mono font-extrabold text-cae-teal">~300 famílias</span>
+                        <span class="block text-[10px] text-cae-muted">~3.000 pessoas (IBGE)</span>
+                    </div>
+                    <div class="bg-cae-bg/80 border border-cae-border rounded-xl px-3 py-2">
+                        <span class="block text-[10px] text-cae-muted uppercase font-bold">Quadro 1 Mapeado</span>
+                        <span class="text-lg font-mono font-extrabold text-cae-amber">35 bloqueios</span>
+                        <span class="block text-[10px] text-cae-muted">vs. 16 avanços</span>
+                    </div>
+                    <div class="bg-cae-bg/80 border border-cae-border rounded-xl px-3 py-2">
+                        <span class="block text-[10px] text-cae-muted uppercase font-bold">Pareto (Top 3)</span>
+                        <span class="text-lg font-mono font-extrabold text-cae-text">80,0%</span>
+                        <span class="block text-[10px] text-cae-muted">28 de 35 bloqueios</span>
+                    </div>
+                    <div class="bg-cae-bg/80 border border-cae-border rounded-xl px-3 py-2">
+                        <span class="block text-[10px] text-cae-muted uppercase font-bold">Extensão PRX_182</span>
+                        <span class="text-lg font-mono font-extrabold text-cae-text">3 eventos</span>
+                        <span class="block text-[10px] text-cae-muted">4h/mês • Agenda 2030</span>
+                    </div>
+                </div>
+
+                <!-- Mini Cronograma Gantt (Mai-Dez 2023) -->
+                <div class="bg-cae-bg/70 border border-cae-border rounded-xl p-3">
+                    <div class="flex justify-between items-center mb-2">
+                        <span class="text-[10px] font-mono font-bold uppercase text-cae-muted">Cronograma Gantt (2023)</span>
+                        <span class="text-[10px] font-mono text-cae-teal">ISSN 2178-9959</span>
+                    </div>
+                    <div class="space-y-2 text-[11px]">
+                        <div>
+                            <div class="flex justify-between text-cae-text font-medium mb-0.5">
+                                <span>1. Pesquisa Bibliográfica</span>
+                                <span class="font-mono text-[10px] text-cae-muted">Mai–Ago</span>
+                            </div>
+                            <div class="w-full h-2 bg-cae-surface rounded-full overflow-hidden">
+                                <div class="h-full bg-cae-teal rounded-full" style="width: 50%; margin-left: 0%;"></div>
+                            </div>
+                        </div>
+                        <div>
+                            <div class="flex justify-between text-cae-text font-medium mb-0.5">
+                                <span>2. Entrevista Horto Bela Vista</span>
+                                <span class="font-mono text-[10px] text-cae-muted">Ago</span>
+                            </div>
+                            <div class="w-full h-2 bg-cae-surface rounded-full overflow-hidden">
+                                <div class="h-full bg-cae-amber rounded-full" style="width: 14%; margin-left: 38%;"></div>
+                            </div>
+                        </div>
+                        <div>
+                            <div class="flex justify-between text-cae-text font-medium mb-0.5">
+                                <span>3. Eventos &amp; Oficinas Extensão</span>
+                                <span class="font-mono text-[10px] text-cae-muted">Set–Dez</span>
+                            </div>
+                            <div class="w-full h-2 bg-cae-surface rounded-full overflow-hidden">
+                                <div class="h-full bg-cae-teal rounded-full" style="width: 48%; margin-left: 52%;"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- COLUNA SUPERIOR DIREITA: INSPETOR DAS 5 DIMENSÕES + SIMULADOR DIDÁTICO DE PERDAS (8 Colunas) -->
+        <section class="lg:col-span-8 flex flex-col gap-3">
+            <div class="glass-panel p-3.5 flex flex-col gap-3 h-full justify-between">
+                <div>
+                    <div class="flex flex-wrap items-center justify-between gap-2 mb-2">
+                        <span class="text-xs font-bold uppercase tracking-widest text-cae-muted">Inspetor Interativo do Quadro 1 (Clique na dimensão ou no gráfico)</span>
+                        <span class="text-[10px] font-mono text-cae-teal bg-cae-bg border border-cae-border px-2 py-0.5 rounded" id="dimToolTag">Ferramentas: SWOT • Plano de Negócios</span>
+                    </div>
+
+                    <div class="flex flex-wrap gap-1.5 mb-2.5" role="tablist" aria-label="Dimensões do Quadro 1">
+                        <button type="button" class="dim-btn active px-2.5 py-1 rounded-lg border border-cae-border bg-cae-bg text-[11px] font-mono font-bold transition" data-dim="0">1. Produção &amp; Mercado</button>
+                        <button type="button" class="dim-btn px-2.5 py-1 rounded-lg border border-cae-border bg-cae-bg text-[11px] font-mono font-bold transition" data-dim="1">2. Tecnologia Agroec.</button>
+                        <button type="button" class="dim-btn px-2.5 py-1 rounded-lg border border-cae-border bg-cae-bg text-[11px] font-mono font-bold transition" data-dim="2">3. Trabalho &amp; Renda</button>
+                        <button type="button" class="dim-btn px-2.5 py-1 rounded-lg border border-cae-border bg-cae-bg text-[11px] font-mono font-bold transition" data-dim="3">4. Conhecimento</button>
+                        <button type="button" class="dim-btn px-2.5 py-1 rounded-lg border border-cae-border bg-cae-bg text-[11px] font-mono font-bold transition" data-dim="4">5. Infraestrutura</button>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-2.5">
+                        <div class="bg-cae-bg/70 border border-cae-border rounded-xl p-2.5">
+                            <span class="block text-[10px] font-mono font-bold uppercase text-cae-teal mb-1.5" id="advTitle">Avanços Identificados (5)</span>
+                            <div class="flex flex-wrap gap-1.5" id="advTags"></div>
+                        </div>
+                        <div class="bg-cae-bg/70 border border-cae-border rounded-xl p-2.5">
+                            <span class="block text-[10px] font-mono font-bold uppercase text-cae-amber mb-1.5" id="blkTitle">Bloqueios Mapeados (9)</span>
+                            <div class="flex flex-wrap gap-1.5" id="blkTags"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Mini Simulador Didático da Oficina Financeira (Fluxo de Caixa & Custo de Perdas - Pág. 5 do artigo) -->
+                <div class="bg-cae-bg/80 border border-cae-border rounded-xl px-3.5 py-2.5 grid grid-cols-1 md:grid-cols-12 gap-3 items-center">
+                    <div class="md:col-span-4">
+                        <span class="block text-[10px] font-mono font-bold uppercase text-cae-amber">Oficina Financeira (Simulador Didático)</span>
+                        <span class="block text-[11px] text-cae-muted leading-snug">Impacto ilustrativo da redução de perdas (armazenagem/embalagem) e planejamento no saldo mensal.</span>
+                    </div>
+                    <div class="md:col-span-5 grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                            <div class="flex justify-between text-[11px] font-bold">
+                                <span>Redução Perdas</span>
+                                <span class="font-mono text-cae-teal" id="valPerda">0%</span>
+                            </div>
+                            <div class="hmi-slider-container">
+                                <div class="slider-fill" id="fillPerda" style="width: 0%;"></div>
+                                <input type="range" id="slPerda" min="0" max="25" value="0">
+                            </div>
+                        </div>
+                        <div>
+                            <div class="flex justify-between text-[11px] font-bold">
+                                <span>Planej. Sazonal</span>
+                                <span class="font-mono text-cae-teal" id="valPlanej">0%</span>
+                            </div>
+                            <div class="hmi-slider-container">
+                                <div class="slider-fill" id="fillPlanej" style="width: 0%;"></div>
+                                <input type="range" id="slPlanej" min="0" max="30" value="0">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="md:col-span-3 text-center md:text-right border-t md:border-t-0 md:border-l border-cae-border pt-2 md:pt-0 md:pl-3">
+                        <span class="block text-[10px] font-mono uppercase text-cae-muted">Ganho Ilustrativo no Saldo</span>
+                        <span class="text-xl font-mono font-extrabold text-cae-teal" id="simSaldo">+0,0%</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- LINHA INFERIOR: GRÁFICO DE PARETO (6 Colunas) + COMPARATIVO AVANÇOS x BLOQUEIOS (6 Colunas) -->
+        <section class="lg:col-span-6">
+            <div class="glass-panel p-4 h-full min-h-[290px] flex flex-col">
+                <div class="flex flex-wrap justify-between items-center gap-2 mb-2">
+                    <h2 class="text-xs font-bold text-cae-text uppercase tracking-widest">Gráfico de Pareto — Concentração de Bloqueios (Quadro 1)</h2>
+                    <span class="text-[10px] font-mono text-cae-amber bg-cae-bg border border-cae-border px-2 py-0.5 rounded">Top 3 = 80,0%</span>
+                </div>
+                <div class="relative flex-1 w-full min-h-[225px]">
+                    <canvas id="paretoChart"></canvas>
+                </div>
+            </div>
+        </section>
+
+        <section class="lg:col-span-6">
+            <div class="glass-panel p-4 h-full min-h-[290px] flex flex-col">
+                <div class="flex flex-wrap justify-between items-center gap-2 mb-2">
+                    <h2 class="text-xs font-bold text-cae-text uppercase tracking-widest">Diagnóstico 5D — Avanços × Bloqueios</h2>
+                    <button type="button" id="toggleChartMode" class="text-[10px] font-mono font-bold text-cae-teal bg-cae-bg border border-cae-border px-2.5 py-0.5 rounded hover:border-cae-teal transition">
+                        Alternar: Radar / Barras
+                    </button>
+                </div>
+                <div class="relative flex-1 w-full min-h-[225px]">
+                    <canvas id="compareChart"></canvas>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <script>
+        const htmlEl = document.documentElement;
+        const themeToggleBtn = document.getElementById('themeToggle');
+        let currentTheme = localStorage.getItem('rv_theme') || 'dark';
+        htmlEl.setAttribute('data-theme', currentTheme);
+
+        function getThemeColors() {
+            const s = getComputedStyle(htmlEl);
+            return {
+                bg: s.getPropertyValue('--cae-bg').trim(),
+                surface: s.getPropertyValue('--cae-surface').trim(),
+                text: s.getPropertyValue('--cae-text').trim(),
+                muted: s.getPropertyValue('--cae-muted').trim(),
+                primary: s.getPropertyValue('--cae-primary').trim(),
+                teal: s.getPropertyValue('--cae-teal').trim(),
+                amber: s.getPropertyValue('--cae-amber').trim(),
+                grid: s.getPropertyValue('--cae-grid').trim(),
+                border: s.getPropertyValue('--cae-border').trim()
+            };
+        }
+
+        function updateThemeLabel() {
+            themeToggleBtn.textContent = currentTheme === 'dark' ? 'Tema: Escuro' : 'Tema: Claro';
+        }
+        updateThemeLabel();
+
+        // Dados reais extraídos diretamente do Quadro 1 (Página 3 do artigo 14º CONICT 2023)
+        const dimensions = [
+            {
+                short: 'Produção & Mercado',
+                tool: 'Plano de Negócios • Análise SWOT • Informática Básica',
+                advances: [
+                    'Aumento da produção e produtividade',
+                    'Maior diversidade',
+                    'Acesso a novos mercados',
+                    'Maior organização social',
+                    'OCS – SPG'
+                ],
+                blocks: [
+                    'Qualidade da produção',
+                    'Falta de ATER',
+                    'Dificuldade de insumos',
+                    'Exclusão dos convencionais',
+                    'Falta de água',
+                    'Desinteresse poder público',
+                    'Oscilação e preços',
+                    'Comparação FLV convencionais × orgânicos',
+                    'Apresentação FLV (porções individualizadas)'
+                ]
+            },
+            {
+                short: 'Tecnologia Agroec.',
+                tool: 'Planejamento da Produção Sustentável • Gráfico de Gantt',
+                advances: [
+                    'Instituto Terra Viva',
+                    'Melhoria da conscientização',
+                    'Embate Agroecologia × Convencional'
+                ],
+                blocks: [
+                    'Falta de ATER (agroecologia)',
+                    'Dificuldades estruturais',
+                    'Convicções pessoais',
+                    'Exigências dos mercados',
+                    'Falta de consciência consumidores',
+                    'Falta de planejamento (sazonalidade)',
+                    'Baixo relacionamento poder público',
+                    'Perecibilidade',
+                    'Baixo nível processamento'
+                ]
+            },
+            {
+                short: 'Trabalho & Renda',
+                tool: 'Matemática Financeira • Fluxo de Caixa • Orçamento',
+                advances: [
+                    'Aumento da renda pela produção',
+                    'Melhoria na qualidade de vida',
+                    'Pequenos investimentos em produção'
+                ],
+                blocks: [
+                    'Falta de recursos investimento',
+                    'Convicções pessoais',
+                    'Oscilação de preços no mercado'
+                ]
+            },
+            {
+                short: 'Conhecimento',
+                tool: '3 Eventos de Extensão (4h) • Oficinas Práticas',
+                advances: [
+                    'Preservação ambiental',
+                    'Maior uso de práticas de conservação',
+                    'Interesse em formação técnica',
+                    'Descarte correto resíduos'
+                ],
+                blocks: [
+                    'Ausência de curso técnico na região',
+                    'Falta de conscientização consumidores',
+                    'Descarte incorreto de resíduos',
+                    'Uso indiscriminado produtos químicos'
+                ]
+            },
+            {
+                short: 'Infraestrutura',
+                tool: 'Gráfico de Pareto • Custo de Estoque & Armazenagem',
+                advances: [
+                    'Pequenos investimentos em estrutura (produção, comercialização e logística)'
+                ],
+                blocks: [
+                    'Falta de veículos',
+                    'Logística de distribuição',
+                    'Armazenamento – embalagens',
+                    'Melhoria na estrutura geral',
+                    'Estradas ruins',
+                    'Falta de equipamentos adequados',
+                    'Disponibilidade de implementos',
+                    'Falta água / irrigação',
+                    'Alto custo Poços Tubulares',
+                    'Packing house – Câmara fria'
+                ]
+            }
+        ];
+
+        function selectDimension(index) {
+            const dim = dimensions[index];
+            document.querySelectorAll('.dim-btn').forEach((btn, idx) => {
+                btn.classList.toggle('active', idx === index);
+            });
+            document.getElementById('dimToolTag').textContent = `Ferramentas: ${dim.tool}`;
+            document.getElementById('advTitle').textContent = `Avanços Identificados (${dim.advances.length})`;
+            document.getElementById('blkTitle').textContent = `Bloqueios Mapeados (${dim.blocks.length})`;
+
+            const advContainer = document.getElementById('advTags');
+            advContainer.innerHTML = dim.advances
+                .map((txt) => `<span class="px-2 py-0.5 rounded-md bg-cae-surface border border-cae-border text-[11px] text-cae-text">${txt}</span>`)
+                .join('');
+
+            const blkContainer = document.getElementById('blkTags');
+            blkContainer.innerHTML = dim.blocks
+                .map((txt) => `<span class="px-2 py-0.5 rounded-md bg-cae-surface border border-cae-border text-[11px] text-cae-text">${txt}</span>`)
+                .join('');
+        }
+
+        document.querySelectorAll('.dim-btn').forEach((btn) => {
+            btn.addEventListener('click', () => selectDimension(parseInt(btn.dataset.dim, 10)));
+        });
+
+        // Simulador didático da Oficina Financeira (pág. 5: redução de perda + planejamento)
+        const slPerda = document.getElementById('slPerda');
+        const slPlanej = document.getElementById('slPlanej');
+
+        function updateFinancialSim() {
+            const perdaPct = parseInt(slPerda.value, 10);
+            const planPct = parseInt(slPlanej.value, 10);
+            document.getElementById('valPerda').textContent = `${perdaPct}%`;
+            document.getElementById('valPlanej').textContent = `${planPct}%`;
+            document.getElementById('fillPerda').style.width = `${(perdaPct / 25) * 100}%`;
+            document.getElementById('fillPlanej').style.width = `${(planPct / 30) * 100}%`;
+
+            // Base ilustrativa normalizada: Receita 100, Custo fixo/op 55, Perda inicial 25 -> Saldo base = 20
+            const receita = 100 * (1 + planPct / 100);
+            const perda = 25 * (1 - perdaPct / 25);
+            const saldoNovo = receita - 55 - perda;
+            const ganhoPct = ((saldoNovo - 20) / 20) * 100;
+            document.getElementById('simSaldo').textContent = `+${ganhoPct.toFixed(1).replace('.', ',')}%`;
+        }
+        slPerda.addEventListener('input', updateFinancialSim);
+        slPlanej.addEventListener('input', updateFinancialSim);
+
+        // Gráfico de Pareto ordenado por nº de bloqueios
+        const paretoOrder = [4, 0, 1, 3, 2]; // Infra(10), Prod(9), Tec(9), Conh(4), Trab(3)
+        const totalBlocks = dimensions.reduce((acc, d) => acc + d.blocks.length, 0);
+        let paretoChart = null;
+        let compareChart = null;
+        let compareMode = 'bar';
+
+        function buildParetoData() {
+            let acc = 0;
+            const labels = [];
+            const counts = [];
+            const cumPct = [];
+            paretoOrder.forEach((idx) => {
+                const count = dimensions[idx].blocks.length;
+                acc += count;
+                labels.push(dimensions[idx].short);
+                counts.push(count);
+                cumPct.push(Number(((acc / totalBlocks) * 100).toFixed(1)));
+            });
+            return { labels, counts, cumPct };
+        }
+
+        function initParetoChart() {
+            const ctx = document.getElementById('paretoChart').getContext('2d');
+            const theme = getThemeColors();
+            const p = buildParetoData();
+
+            paretoChart = new Chart(ctx, {
+                data: {
+                    labels: p.labels,
+                    datasets: [
+                        {
+                            type: 'bar',
+                            label: 'Nº de Bloqueios',
+                            data: p.counts,
+                            backgroundColor: 'rgba(245, 158, 11, 0.72)',
+                            borderColor: theme.amber,
+                            borderWidth: 1.5,
+                            borderRadius: 6,
+                            yAxisID: 'y'
+                        },
+                        {
+                            type: 'line',
+                            label: '% Acumulado',
+                            data: p.cumPct,
+                            borderColor: theme.teal,
+                            backgroundColor: theme.teal,
+                            borderWidth: 2.5,
+                            pointRadius: 4,
+                            tension: 0.25,
+                            yAxisID: 'y1'
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    onClick: (_, elements) => {
+                        if (elements && elements.length > 0) {
+                            const barIdx = elements[0].index;
+                            selectDimension(paretoOrder[barIdx]);
+                        }
+                    },
+                    interaction: { mode: 'index', intersect: false },
+                    plugins: {
+                        legend: { labels: { color: theme.muted, font: { family: 'JetBrains Mono', size: 10 } } },
+                        tooltip: {
+                            backgroundColor: theme.surface,
+                            titleColor: theme.text,
+                            bodyColor: theme.text,
+                            borderColor: theme.border,
+                            borderWidth: 1
+                        }
+                    },
+                    scales: {
+                        x: {
+                            grid: { display: false },
+                            ticks: { color: theme.muted, font: { family: 'Plus Jakarta Sans', size: 10 } }
+                        },
+                        y: {
+                            beginAtZero: true,
+                            max: 12,
+                            grid: { color: theme.grid },
+                            ticks: { color: theme.muted, font: { family: 'JetBrains Mono', size: 10 } }
+                        },
+                        y1: {
+                            position: 'right',
+                            min: 0,
+                            max: 100,
+                            grid: { drawOnChartArea: false },
+                            ticks: {
+                                color: theme.teal,
+                                font: { family: 'JetBrains Mono', size: 10 },
+                                callback: (v) => `${v}%`
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        function initCompareChart() {
+            const ctx = document.getElementById('compareChart').getContext('2d');
+            const theme = getThemeColors();
+
+            if (compareChart) compareChart.destroy();
+
+            const labels = dimensions.map((d) => d.short);
+            const advData = dimensions.map((d) => d.advances.length);
+            const blkData = dimensions.map((d) => d.blocks.length);
+
+            const commonScales = compareMode === 'bar'
+                ? {
+                    x: { grid: { display: false }, ticks: { color: theme.muted, font: { family: 'Plus Jakarta Sans', size: 10 } } },
+                    y: { beginAtZero: true, max: 12, grid: { color: theme.grid }, ticks: { color: theme.muted, font: { family: 'JetBrains Mono', size: 10 } } }
+                }
+                : {
+                    r: {
+                        beginAtZero: true,
+                        max: 11,
+                        grid: { color: theme.grid },
+                        angleLines: { color: theme.grid },
+                        pointLabels: { color: theme.text, font: { family: 'Plus Jakarta Sans', size: 10 } },
+                        ticks: { display: false }
+                    }
+                };
+
+            compareChart = new Chart(ctx, {
+                type: compareMode,
+                data: {
+                    labels,
+                    datasets: [
+                        {
+                            label: 'Avanços (Quadro 1)',
+                            data: advData,
+                            backgroundColor: 'rgba(20, 184, 166, 0.35)',
+                            borderColor: theme.teal,
+                            borderWidth: 2,
+                            borderRadius: compareMode === 'bar' ? 5 : 0
+                        },
+                        {
+                            label: 'Bloqueios (Quadro 1)',
+                            data: blkData,
+                            backgroundColor: 'rgba(245, 158, 11, 0.28)',
+                            borderColor: theme.amber,
+                            borderWidth: 2,
+                            borderRadius: compareMode === 'bar' ? 5 : 0
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    onClick: (_, elements) => {
+                        if (elements && elements.length > 0) {
+                            selectDimension(elements[0].index);
+                        }
+                    },
+                    plugins: {
+                        legend: { labels: { color: theme.muted, font: { family: 'JetBrains Mono', size: 10 } } },
+                        tooltip: {
+                            backgroundColor: theme.surface,
+                            titleColor: theme.text,
+                            bodyColor: theme.text,
+                            borderColor: theme.border,
+                            borderWidth: 1
+                        }
+                    },
+                    scales: commonScales
+                }
+            });
+        }
+
+        function refreshChartsTheme() {
+            const theme = getThemeColors();
+            if (paretoChart) {
+                paretoChart.data.datasets[0].borderColor = theme.amber;
+                paretoChart.data.datasets[1].borderColor = theme.teal;
+                paretoChart.data.datasets[1].backgroundColor = theme.teal;
+                paretoChart.options.plugins.legend.labels.color = theme.muted;
+                paretoChart.options.plugins.tooltip.backgroundColor = theme.surface;
+                paretoChart.options.plugins.tooltip.titleColor = theme.text;
+                paretoChart.options.plugins.tooltip.bodyColor = theme.text;
+                paretoChart.options.plugins.tooltip.borderColor = theme.border;
+                paretoChart.options.scales.x.ticks.color = theme.muted;
+                paretoChart.options.scales.y.grid.color = theme.grid;
+                paretoChart.options.scales.y.ticks.color = theme.muted;
+                paretoChart.options.scales.y1.ticks.color = theme.teal;
+                paretoChart.update();
+            }
+            initCompareChart();
+        }
+
+        document.getElementById('toggleChartMode').addEventListener('click', () => {
+            compareMode = compareMode === 'bar' ? 'radar' : 'bar';
+            initCompareChart();
+        });
+
+        themeToggleBtn.addEventListener('click', () => {
+            currentTheme = currentTheme === 'dark' ? 'light' : 'dark';
+            htmlEl.setAttribute('data-theme', currentTheme);
+            localStorage.setItem('rv_theme', currentTheme);
+            updateThemeLabel();
+            refreshChartsTheme();
+        });
+
+        window.onload = () => {
+            selectDimension(0);
+            updateFinancialSim();
+            initParetoChart();
+            initCompareChart();
+        };
+    </script>
+</body>
+</html>

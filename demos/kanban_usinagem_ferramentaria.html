@@ -1,0 +1,1202 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestão Visual Kanban &amp; Drum-Buffer-Rope — Ferramentaria Nacional</title>
+    <script>
+        (function() {
+            const savedTheme = localStorage.getItem('rv_theme') || 'dark';
+            document.documentElement.setAttribute('data-theme', savedTheme);
+        })();
+    </script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'system-ui', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    },
+                    colors: {
+                        cae: {
+                            bg: 'var(--cae-bg)',
+                            surface: 'var(--cae-surface)',
+                            text: 'var(--cae-text)',
+                            muted: 'var(--cae-muted)',
+                            teal: 'var(--cae-teal)',
+                            amber: 'var(--cae-amber)',
+                            danger: 'var(--cae-danger)',
+                            border: 'var(--cae-border)'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        /* Paleta 2: CAE / von Mises Spectrum */
+        :root, [data-theme="dark"] {
+            --cae-bg: #090E17;
+            --cae-surface: #131E31;
+            --cae-panel-bg: rgba(19, 30, 49, 0.88);
+            --cae-text: #F8FAFC;
+            --cae-muted: #94A3B8;
+            --cae-primary: #14B8A6;
+            --cae-teal: #2DD4BF;
+            --cae-amber: #F59E0B;
+            --cae-danger: #EF4444;
+            --cae-border: rgba(148, 163, 184, 0.16);
+            --cae-grid: rgba(148, 163, 184, 0.12);
+            --cae-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.72);
+            --kraft-bg: #855829;
+            --kraft-border: #A2723E;
+            --kraft-text: #FDFBF7;
+        }
+
+        [data-theme="light"] {
+            --cae-bg: #F6F7F9;
+            --cae-surface: #FFFFFF;
+            --cae-panel-bg: rgba(255, 255, 255, 0.94);
+            --cae-text: #0F172A;
+            --cae-muted: #64748B;
+            --cae-primary: #0F3D5E;
+            --cae-teal: #0D9488;
+            --cae-amber: #D97706;
+            --cae-danger: #DC2626;
+            --cae-border: rgba(15, 23, 42, 0.14);
+            --cae-grid: rgba(15, 23, 42, 0.10);
+            --cae-shadow: 0 12px 32px -8px rgba(15, 23, 42, 0.09);
+            --kraft-bg: #D7B992;
+            --kraft-border: #B89264;
+            --kraft-text: #3D2612;
+        }
+
+        body {
+            background-color: var(--cae-bg);
+            color: var(--cae-text);
+            background-image: radial-gradient(circle at top right, rgba(20, 184, 166, 0.07), transparent 40%),
+                              radial-gradient(circle at bottom left, rgba(245, 158, 11, 0.05), transparent 40%);
+            overflow-x: hidden;
+            transition: background-color 0.25s ease, color 0.25s ease;
+        }
+
+        .glass-panel {
+            background: var(--cae-panel-bg);
+            backdrop-filter: blur(12px);
+            border: 1px solid var(--cae-border);
+            box-shadow: var(--cae-shadow);
+            border-radius: 16px;
+        }
+
+        /* Bolsos Kraft Reais (Inspiração nas fotos da oficina) */
+        .kraft-pocket {
+            background: linear-gradient(180deg, var(--kraft-bg) 0%, rgba(133, 88, 41, 0.85) 100%);
+            border: 1px solid var(--kraft-border);
+            border-radius: 8px;
+            position: relative;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.25), 0 3px 8px rgba(0,0,0,0.15);
+        }
+
+        .kraft-pocket::before {
+            content: '';
+            position: absolute;
+            top: -5px;
+            left: 20%;
+            right: 20%;
+            height: 5px;
+            background: rgba(0,0,0,0.2);
+            border-radius: 3px 3px 0 0;
+        }
+
+        /* Cartão de Usinagem Físico com animação */
+        .ticket-card {
+            background: var(--cae-surface);
+            border: 1px solid var(--cae-border);
+            border-left: 4px solid var(--cae-teal);
+            border-radius: 6px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.12);
+            transition: all 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+            user-select: none;
+            cursor: pointer;
+        }
+
+        .ticket-card:hover {
+            transform: translateY(-3px) scale(1.02);
+            box-shadow: 0 6px 14px rgba(0,0,0,0.25);
+            border-color: var(--cae-teal);
+        }
+
+        .ticket-card.selected {
+            border-color: var(--cae-amber);
+            border-left-color: var(--cae-amber);
+            box-shadow: 0 0 0 2px var(--cae-amber);
+        }
+
+        .ticket-card.moving {
+            animation: card-slide 0.5s ease-in-out;
+        }
+
+        @keyframes card-slide {
+            0% { transform: scale(0.9) translateY(-10px); opacity: 0.5; }
+            50% { transform: scale(1.05) translateY(-3px); opacity: 0.9; }
+            100% { transform: scale(1) translateY(0); opacity: 1; }
+        }
+
+        /* Torre Farol Industrial */
+        .farol-tower {
+            background: #111827;
+            border: 2px solid #374151;
+            border-radius: 12px;
+            padding: 4px;
+            display: inline-flex;
+            flex-direction: column;
+            gap: 4px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.4);
+        }
+
+        .farol-bulb {
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            opacity: 0.25;
+            transition: all 0.2s ease;
+        }
+
+        .farol-bulb.active-red {
+            background-color: #EF4444;
+            opacity: 1;
+            box-shadow: 0 0 12px #EF4444, 0 0 20px #EF4444;
+            animation: pulse-farol 1s infinite;
+        }
+
+        .farol-bulb.active-amber {
+            background-color: #F59E0B;
+            opacity: 1;
+            box-shadow: 0 0 12px #F59E0B, 0 0 20px #F59E0B;
+        }
+
+        .farol-bulb.active-green {
+            background-color: #10B981;
+            opacity: 1;
+            box-shadow: 0 0 12px #10B981, 0 0 20px #10B981;
+        }
+
+        @keyframes pulse-farol {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.6; transform: scale(1.12); }
+        }
+
+        /* Caixas plásticas do carrinho */
+        .klt-box {
+            background: linear-gradient(180deg, #374151 0%, #1F2937 100%);
+            border: 1px solid #4B5563;
+            border-radius: 4px;
+            color: #F3F4F6;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 10px;
+            font-weight: 700;
+            padding: 3px 8px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.25);
+            transition: all 0.25s ease;
+        }
+
+        .klt-box.overflow {
+            background: linear-gradient(180deg, #991B1B 0%, #7F1D1D 100%);
+            border-color: #EF4444;
+            color: #FEE2E2;
+            animation: pulse-box 1.2s infinite;
+        }
+
+        @keyframes pulse-box {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.02); }
+        }
+
+        .tab-btn.active {
+            background: var(--cae-surface);
+            border-color: var(--cae-teal);
+            color: var(--cae-teal);
+            font-weight: 700;
+        }
+    </style>
+</head>
+<body class="min-h-screen p-3 md:p-5 flex flex-col font-sans">
+
+    <!-- HEADER & NAVEGAÇÃO -->
+    <header class="glass-panel px-5 py-3 mb-4 flex flex-wrap justify-between items-center gap-3">
+        <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-lg bg-cae-surface border border-cae-border flex items-center justify-center shadow-lg relative overflow-hidden">
+                <div class="absolute inset-0 bg-cae-teal/20"></div>
+                <svg class="w-5 h-5 text-cae-teal relative z-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <rect x="3" y="3" width="7" height="9" rx="1" stroke-width="2"/>
+                    <rect x="14" y="3" width="7" height="5" rx="1" stroke-width="2"/>
+                    <rect x="14" y="12" width="7" height="9" rx="1" stroke-width="2"/>
+                    <rect x="3" y="16" width="7" height="5" rx="1" stroke-width="2"/>
+                </svg>
+            </div>
+            <div>
+                <h1 class="text-base md:text-lg font-extrabold tracking-tight text-cae-text">
+                    QUADRO KANBAN &amp; <span class="text-cae-teal">DRUM-BUFFER-ROPE</span>
+                </h1>
+                <p class="text-[11px] font-mono text-cae-muted uppercase tracking-wider">
+                    Gêmeo Digital da Ferramentaria Nacional • Lead Time Médio 38d → 14d (σ 106d → 5d)
+                </p>
+            </div>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-2">
+            <!-- ABAS PRINCIPAIS (CHÃO DE FÁBRICA VS ESTATÍSTICA) -->
+            <div class="flex bg-cae-bg border border-cae-border rounded-lg p-1 text-xs font-mono">
+                <button type="button" id="tabShopfloor" class="tab-btn active px-3 py-1.5 rounded border border-transparent transition">
+                    🏭 Chão de Fábrica (Quadro Vivo)
+                </button>
+                <button type="button" id="tabStats" class="tab-btn px-3 py-1.5 rounded border border-transparent text-cae-muted hover:text-cae-text transition">
+                    📊 Auditoria de Dispersão (2023–2025)
+                </button>
+            </div>
+
+            <a href="../index.html#cases" class="px-3 py-1.5 rounded-full bg-cae-surface border border-cae-border text-xs font-mono font-bold text-cae-muted hover:text-cae-teal hover:border-cae-teal transition">
+                &larr; Portfólio
+            </a>
+            <button id="themeToggle" type="button" aria-label="Alternar tema Claro e Escuro" class="flex items-center gap-2 px-3 py-1.5 rounded-full bg-cae-surface border border-cae-border text-xs font-mono font-bold text-cae-text hover:border-cae-teal transition">
+                <svg id="sunIcon" class="w-4 h-4 hidden text-cae-amber" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="5" stroke-width="2"/><line x1="12" y1="1" x2="12" y2="3" stroke-width="2"/><line x1="12" y1="21" x2="12" y2="23" stroke-width="2"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64" stroke-width="2"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78" stroke-width="2"/><line x1="1" y1="12" x2="3" y2="12" stroke-width="2"/><line x1="21" y1="12" x2="23" y2="12" stroke-width="2"/></svg>
+                <svg id="moonIcon" class="w-4 h-4 text-cae-teal" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg>
+                <span id="themeText">Tema</span>
+            </button>
+        </div>
+    </header>
+
+    <!-- KPIS EXECUTIVOS NO TOPO -->
+    <section class="grid grid-cols-2 md:grid-cols-4 gap-3.5 mb-4">
+        <div class="glass-panel p-3.5 flex flex-col justify-between">
+            <span class="text-[10px] font-mono text-cae-muted uppercase font-bold">2023 • Fluxo Empurrado</span>
+            <div class="mt-1">
+                <div class="flex items-baseline gap-1.5">
+                    <span class="text-2xl font-mono font-extrabold text-cae-text">38</span>
+                    <span class="text-xs font-mono text-cae-muted">dias médios / peça</span>
+                </div>
+                <span class="text-[11px] font-mono text-cae-danger font-bold">Desvio σ = 106 dias</span>
+            </div>
+        </div>
+
+        <div class="glass-panel p-3.5 flex flex-col justify-between">
+            <span class="text-[10px] font-mono text-cae-muted uppercase font-bold">2024 • Início do Quadro</span>
+            <div class="mt-1">
+                <div class="flex items-baseline gap-1.5">
+                    <span class="text-2xl font-mono font-extrabold text-cae-amber">30</span>
+                    <span class="text-xs font-mono text-cae-muted">dias médios (-21%)</span>
+                </div>
+                <span class="text-[11px] font-mono text-cae-amber font-bold">Desvio σ = 38 dias</span>
+            </div>
+        </div>
+
+        <div class="glass-panel p-3.5 flex flex-col justify-between">
+            <span class="text-[10px] font-mono text-cae-muted uppercase font-bold">2025 • Puxado DBR</span>
+            <div class="mt-1">
+                <div class="flex items-baseline gap-1.5">
+                    <span class="text-2xl font-mono font-extrabold text-cae-teal">14</span>
+                    <span class="text-xs font-mono text-cae-muted">dias médios (-63,2%)</span>
+                </div>
+                <span class="text-[11px] font-mono text-cae-teal font-bold">Desvio σ = 5 dias (linear)</span>
+            </div>
+        </div>
+
+        <div class="glass-panel p-3.5 flex flex-col justify-between">
+            <span class="text-[10px] font-mono text-cae-muted uppercase font-bold">WIP do Posto Gargalo</span>
+            <div class="mt-1">
+                <div class="flex items-baseline gap-1.5">
+                    <span id="kpiWipCount" class="text-2xl font-mono font-extrabold text-cae-teal">6</span>
+                    <span class="text-xs font-mono text-cae-muted">/ 10 caixas max</span>
+                </div>
+                <span id="kpiWipStatus" class="text-[11px] font-mono text-cae-teal font-bold">Buffer Saudável</span>
+            </div>
+        </div>
+    </section>
+
+    <!-- ABA 1: CHÃO DE FÁBRICA & QUADRO VIVO (VISÃO PRINCIPAL) -->
+    <div id="viewShopfloor" class="flex-1 flex flex-col gap-4">
+
+        <!-- BARRA HERO DE CONTROLES NARRATIVOS DBR -->
+        <div class="glass-panel p-3.5 flex flex-wrap items-center justify-between gap-3">
+            <div class="flex flex-wrap items-center gap-2">
+                <span class="text-xs font-mono font-bold text-cae-muted uppercase">Cenário Operacional:</span>
+                <div class="flex bg-cae-bg border border-cae-border rounded-lg p-0.5 text-xs font-mono">
+                    <button type="button" id="btnCenario2025" class="px-3 py-1 rounded bg-cae-teal text-cae-bg font-bold transition">
+                        ✓ 2025 (Fluxo Puxado Drum-Buffer-Rope)
+                    </button>
+                    <button type="button" id="btnCenario2023" class="px-3 py-1 rounded text-cae-muted hover:text-cae-text font-bold transition">
+                        ⚠ 2023 (Fluxo Empurrado Caótico)
+                    </button>
+                </div>
+            </div>
+
+            <div class="flex flex-wrap items-center gap-2">
+                <button type="button" id="btnPlayPause" class="px-3.5 py-1.5 rounded-lg bg-cae-teal/15 border border-cae-teal text-cae-teal font-mono text-xs font-bold hover:bg-cae-teal/25 transition">
+                    ⏸ Pausar Simulação
+                </button>
+                <button type="button" id="btnInjectOrder" class="px-3.5 py-1.5 rounded-lg bg-cae-surface border border-cae-border text-cae-text font-mono text-xs font-bold hover:border-cae-teal transition">
+                    + Injetar Pedido (Novo Cartão)
+                </button>
+                <button type="button" id="btnDrumTakt" class="px-3.5 py-1.5 rounded-lg bg-cae-amber/15 border border-cae-amber text-cae-amber font-mono text-xs font-bold hover:bg-cae-amber/25 transition">
+                    ⚡ Takt do Tambor (Drum Cut)
+                </button>
+                <select id="selAnimSpeed" class="bg-cae-bg border border-cae-border text-cae-text text-xs font-mono rounded-lg px-2 py-1.5">
+                    <option value="1">1x Velocidade</option>
+                    <option value="2">2x Velocidade</option>
+                    <option value="3">4x Velocidade</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- O QUADRO KANBAN FÍSICO COM CARTÕES SE MOVIMENTANDO -->
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-4 flex-1">
+
+            <!-- QUADRO KANBAN (8 COLUNAS) -->
+            <div class="lg:col-span-8 glass-panel p-4 flex flex-col justify-between">
+                <div>
+                    <div class="flex flex-wrap items-center justify-between gap-2 mb-3 pb-2 border-b border-cae-border">
+                        <div class="flex items-center gap-2">
+                            <span class="text-xs font-mono font-bold text-cae-amber uppercase tracking-wider">Quadro Físico da Ferramentaria Nacional</span>
+                            <span class="text-[10px] font-mono text-cae-muted bg-cae-bg px-2 py-0.5 rounded border border-cae-border">Bolsas Kraft &amp; Farol de Usinagem</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <div class="farol-tower">
+                                <div id="farolRed" class="farol-bulb"></div>
+                                <div id="farolAmber" class="farol-bulb"></div>
+                                <div id="farolGreen" class="farol-bulb active-green"></div>
+                            </div>
+                            <span id="farolText" class="text-xs font-mono font-bold text-cae-teal">Farol Verde: Pode Usinar</span>
+                        </div>
+                    </div>
+
+                    <!-- ESTRUTURA DO QUADRO EM 4 RAIAS INDUSTRIAIS -->
+                    <div class="grid grid-cols-1 sm:grid-cols-4 gap-3">
+
+                        <!-- COLUNA 1: PLANEJADOS (INÍCIO DO QUADRO / SINAL ROPE) -->
+                        <div class="flex flex-col gap-2">
+                            <div class="flex justify-between items-center text-xs font-mono font-bold text-cae-muted pb-1 border-b border-cae-border">
+                                <span>1. PLANEJADOS</span>
+                                <span id="badgePlanCount" class="bg-cae-bg px-1.5 py-0.5 rounded text-cae-text">3</span>
+                            </div>
+                            <div class="text-[10px] font-mono text-cae-muted mb-1">
+                                Projetos (P), Reposição (R), Manut. (M)
+                            </div>
+                            <div id="pocketPlanned" class="kraft-pocket p-2.5 min-h-[260px] flex flex-col gap-2">
+                                <!-- Cartões planejados inseridos via JS -->
+                            </div>
+                        </div>
+
+                        <!-- COLUNA 2: "COMPRE AQUI" (PRÓXIMO CARTÃO A SER USINADO) -->
+                        <div class="flex flex-col gap-2">
+                            <div class="flex justify-between items-center text-xs font-mono font-bold text-cae-teal pb-1 border-b border-cae-teal/30">
+                                <span>2. COMPRE AQUI</span>
+                                <span class="text-[10px] font-mono text-cae-muted">Operador Puxa</span>
+                            </div>
+                            <div class="text-[10px] font-mono text-cae-muted mb-1">
+                                Próxima usinagem imediata
+                            </div>
+                            <div id="pocketBuy" class="kraft-pocket p-2.5 min-h-[260px] flex flex-col gap-2 border-cae-teal/40">
+                                <!-- Cartão pronto para ser comprado -->
+                            </div>
+                        </div>
+
+                        <!-- COLUNA 3: "EM USINAGEM" (NO POSTO DE TRABALHO) -->
+                        <div class="flex flex-col gap-2">
+                            <div class="flex justify-between items-center text-xs font-mono font-bold text-cae-amber pb-1 border-b border-cae-amber/30">
+                                <span>3. EM USINAGEM</span>
+                                <span class="text-[10px] font-mono text-cae-muted">Em Máquina</span>
+                            </div>
+                            <div class="text-[10px] font-mono text-cae-muted mb-1">
+                                Torno, Fresa, Bancada
+                            </div>
+                            <div id="pocketRunning" class="kraft-pocket p-2.5 min-h-[260px] flex flex-col gap-2 border-cae-amber/40">
+                                <!-- Cartão em processo -->
+                            </div>
+                        </div>
+
+                        <!-- COLUNA 4: "ABASTEÇA AQUI" (DEVOLUÇÃO AO PROCESSO SEGUINTE) -->
+                        <div class="flex flex-col gap-2">
+                            <div class="flex justify-between items-center text-xs font-mono font-bold text-cae-primary pb-1 border-b border-cae-border">
+                                <span>4. ABASTEÇA AQUI</span>
+                                <span class="text-[10px] font-mono text-cae-muted">Próximo Posto</span>
+                            </div>
+                            <div class="text-[10px] font-mono text-cae-muted mb-1">
+                                Desenhos e cartões concluídos
+                            </div>
+                            <div id="pocketRefill" class="kraft-pocket p-2.5 min-h-[260px] flex flex-col gap-2">
+                                <!-- Cartões devolvidos para a próxima etapa -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ALERTA DINÂMICO DE WIP (REGRA DAS 10 CAIXAS) -->
+                <div id="wipAlertBanner" class="mt-4 p-2.5 rounded-xl border border-cae-border bg-cae-bg flex items-center justify-between text-xs font-mono">
+                    <div class="flex items-center gap-2">
+                        <span id="wipAlertDot" class="w-3 h-3 rounded-full bg-cae-teal animate-pulse"></span>
+                        <span id="wipAlertMsg" class="text-cae-text">Fluxo Linear Estável: Buffer dentro do limite de 10 caixas.</span>
+                    </div>
+                    <span id="wipCapTag" class="px-2 py-0.5 rounded bg-cae-surface border border-cae-border text-cae-muted text-[11px]">
+                        Teto: 10 Caixas
+                    </span>
+                </div>
+            </div>
+
+            <!-- COLUNA LATERAL (4 COLUNAS): CARRINHO DE CAIXAS (BUFFER) & O TAMBOR (DRUM) -->
+            <div class="lg:col-span-4 flex flex-col gap-4">
+
+                <!-- O TAMBOR (DRUM / RESTRIÇÃO: ELETROEROSÃO A FIO & CNC) -->
+                <div class="glass-panel p-4 flex flex-col justify-between">
+                    <div class="flex justify-between items-start mb-2">
+                        <div>
+                            <span class="text-[10px] font-mono text-cae-amber uppercase font-bold">Posto Restrição (TOC)</span>
+                            <h3 class="text-sm font-bold text-cae-text">O Tambor (Drum) • Eletroerosão a Fio &amp; CNC</h3>
+                        </div>
+                        <span class="px-2 py-0.5 rounded text-[10px] font-mono bg-cae-bg border border-cae-teal text-cae-teal font-bold">
+                            Takt Master
+                        </span>
+                    </div>
+
+                    <div class="bg-cae-bg p-3 rounded-xl border border-cae-border mb-3">
+                        <div class="flex justify-between text-xs font-mono text-cae-muted mb-1">
+                            <span>Ciclo do Fio Robofil:</span>
+                            <span id="drumTaktPct" class="text-cae-teal font-bold">65%</span>
+                        </div>
+                        <div class="w-full bg-cae-surface h-2.5 rounded-full overflow-hidden border border-cae-border">
+                            <div id="drumProgressBar" class="h-full bg-cae-teal transition-all duration-300" style="width: 65%;"></div>
+                        </div>
+                    </div>
+
+                    <div class="flex justify-between items-center text-xs font-mono">
+                        <span class="text-cae-muted">Peças Concluídas na Oficina:</span>
+                        <span id="statFinishedCount" class="text-lg font-bold text-cae-teal">42 pçs</span>
+                    </div>
+                </div>
+
+                <!-- O CARRINHO FÍSICO COM AS CAIXAS EMPILHADAS (BUFFER) -->
+                <div class="glass-panel p-4 flex flex-col flex-1 justify-between">
+                    <div class="flex justify-between items-center mb-2 pb-1 border-b border-cae-border">
+                        <div class="flex items-center gap-1.5">
+                            <span class="text-xs font-mono font-bold text-cae-text">CARRINHO DE CAIXAS (BUFFER)</span>
+                            <span class="text-[10px] font-mono text-cae-amber font-bold" id="cartCountBadge">(6 caixas)</span>
+                        </div>
+                        <span class="text-[10px] font-mono text-cae-muted">Regra: Máx 10</span>
+                    </div>
+
+                    <p class="text-[11px] text-cae-muted font-mono mb-2 leading-relaxed">
+                        Identificação física por cartão na próxima operação. Se passar de 10 caixas: <span class="text-cae-danger font-bold">PARA ABASTECIMENTO</span>!
+                    </p>
+
+                    <!-- PILHA DINÂMICA DE CAIXAS (EMULANDO O CHÃO DE FÁBRICA) -->
+                    <div class="bg-cae-bg/85 border border-cae-border rounded-xl p-3 flex flex-col justify-end min-h-[220px] relative overflow-hidden">
+                        <!-- Linha de teto das 10 caixas -->
+                        <div class="absolute top-[35px] left-2 right-2 border-b-2 border-dashed border-red-500/70 flex justify-between items-center pointer-events-none z-10">
+                            <span class="text-[9px] font-mono text-red-400 bg-cae-bg px-1 font-bold">LIMITE: 10 CAIXAS (WIP CAP)</span>
+                            <span class="text-[9px] font-mono text-red-400 bg-cae-bg px-1 font-bold">STOP!</span>
+                        </div>
+
+                        <!-- Pilha de caixas -->
+                        <div id="boxStackContainer" class="flex flex-col-reverse gap-1.5 z-0">
+                            <!-- Caixas geradas via JS -->
+                        </div>
+
+                        <!-- Base tubular do carrinho -->
+                        <div class="mt-2 pt-1 border-t-2 border-gray-600 flex justify-around items-center">
+                            <div class="w-3 h-3 rounded-full bg-gray-500"></div>
+                            <div class="h-1 w-20 bg-gray-600"></div>
+                            <div class="w-3 h-3 rounded-full bg-gray-500"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- DETALHE COMPLETO DO CARTÃO SELECIONADO (RG, PEÇAS, ROTEIRO) -->
+        <div class="glass-panel p-4">
+            <div class="flex flex-wrap items-center justify-between gap-2 pb-2 mb-2 border-b border-cae-border">
+                <div class="flex items-center gap-2">
+                    <span class="text-xs font-mono font-bold text-cae-amber uppercase">FICHA TÉCNICA:</span>
+                    <span id="detCardId" class="text-sm font-mono font-extrabold text-cae-teal">P517</span>
+                    <span id="detCardType" class="text-[10px] font-mono px-2 py-0.5 rounded bg-cae-bg border border-cae-border text-cae-text">PROJETO</span>
+                </div>
+                <span id="detCardFerramental" class="text-xs font-mono text-cae-muted">Ferramental: Mola 23153</span>
+            </div>
+
+            <div id="detCardContent" class="text-xs font-mono">
+                <!-- Conteúdo dinâmico da tabela de RGs -->
+            </div>
+        </div>
+    </div>
+
+    <!-- ABA 2: AUDITORIA ESTATÍSTICA & LEAD TIME (VISÃO SECUNDÁRIA) -->
+    <div id="viewStats" class="hidden flex-1 flex flex-col gap-4">
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+
+            <!-- GRÁFICO 1: EVOLUÇÃO LEAD TIME MÉDIO & DESVIO (2023 - 2024 - 2025) -->
+            <div class="glass-panel p-4 flex flex-col min-h-[320px]">
+                <div class="flex justify-between items-center mb-2">
+                    <div>
+                        <h2 class="text-xs font-bold text-cae-text uppercase tracking-wider">Evolução do Prazo de Entrega por Peça</h2>
+                        <p class="text-[11px] text-cae-muted">Média de dias (µ) e barra de dispersão (±1σ) por ano</p>
+                    </div>
+                    <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-500/15 text-cae-teal border border-cae-teal/30">
+                        -63,2% Lead Time
+                    </span>
+                </div>
+                <div class="relative flex-1 w-full min-h-[240px]">
+                    <canvas id="chartLeadTime"></canvas>
+                </div>
+            </div>
+
+            <!-- GRÁFICO 2: AFUNILAMENTO DA DISTRIBUIÇÃO NORMAL (CURVA DE SINO) -->
+            <div class="glass-panel p-4 flex flex-col min-h-[320px]">
+                <div class="flex justify-between items-center mb-2">
+                    <div>
+                        <h2 class="text-xs font-bold text-cae-text uppercase tracking-wider">Afunilamento de Dispersão Gaussiana</h2>
+                        <p class="text-[11px] text-cae-muted">Curvas normais comparadas (2023 vs. 2024 vs. 2025)</p>
+                    </div>
+                    <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-500/15 text-cae-teal border border-cae-teal/30">
+                        -95,3% Variabilidade
+                    </span>
+                </div>
+                <div class="relative flex-1 w-full min-h-[240px]">
+                    <canvas id="chartGaussian"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- SÍNTESE COMPARATIVA E IMPACTOS ESTRUTURAIS -->
+        <div class="glass-panel p-4 text-xs font-mono text-cae-muted leading-relaxed">
+            <h3 class="text-xs font-bold text-cae-text uppercase tracking-wider mb-2 flex items-center gap-2">
+                <span class="w-2.5 h-2.5 rounded-full bg-cae-teal"></span>
+                Por que o método eliminou a dispersão caótica de 106 dias?
+            </h3>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-3 text-[11px] mt-2">
+                <div class="bg-cae-bg p-3 rounded-lg border border-cae-border">
+                    <strong class="text-cae-text block mb-1">1. Fim das Caixas Perdidas:</strong>
+                    Em 2023, peças aguardavam semanas escondidas em carrinhos sem identificação. Com o cartão visível no bolso kraft e caixas identificadas, cada item tem status claro em tempo real.
+                </div>
+                <div class="bg-cae-bg p-3 rounded-lg border border-cae-border">
+                    <strong class="text-cae-text block mb-1">2. Agrupamento por Roteiro:</strong>
+                    Itens com o mesmo roteiro mecânico (ex: R703 com 9 punções ou P517 com 8 pinças) viajam no mesmo cartão, cortando drasticamente paradas para troca de ferramentas e regulagem de máquinas.
+                </div>
+                <div class="bg-cae-bg p-3 rounded-lg border border-cae-border">
+                    <strong class="text-cae-text block mb-1">3. Teto Rígido de 10 Caixas (DBR):</strong>
+                    A fábrica nunca produz mais rápido do que a capacidade do posto de eletroerosão a fio (Drum) de engolir o trabalho. Se passar de 10 caixas, o farol vermelho interrompe a entrada de novos pedidos.
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        (function() {
+            const htmlEl = document.documentElement;
+            const themeToggle = document.getElementById('themeToggle');
+            const sunIcon = document.getElementById('sunIcon');
+            const moonIcon = document.getElementById('moonIcon');
+            const themeText = document.getElementById('themeText');
+
+            function getThemeColors() {
+                const s = getComputedStyle(htmlEl);
+                return {
+                    text: s.getPropertyValue('--cae-text').trim(),
+                    muted: s.getPropertyValue('--cae-muted').trim(),
+                    teal: s.getPropertyValue('--cae-teal').trim(),
+                    amber: s.getPropertyValue('--cae-amber').trim(),
+                    danger: s.getPropertyValue('--cae-danger').trim(),
+                    grid: s.getPropertyValue('--cae-grid').trim(),
+                    surface: s.getPropertyValue('--cae-surface').trim()
+                };
+            }
+
+            function syncThemeUi() {
+                const t = htmlEl.getAttribute('data-theme') || 'dark';
+                if (t === 'light') {
+                    sunIcon.classList.remove('hidden');
+                    moonIcon.classList.add('hidden');
+                    themeText.textContent = 'Claro';
+                } else {
+                    sunIcon.classList.add('hidden');
+                    moonIcon.classList.remove('hidden');
+                    themeText.textContent = 'Escuro';
+                }
+            }
+
+            // NAVEGAÇÃO POR ABAS
+            const tabShopfloor = document.getElementById('tabShopfloor');
+            const tabStats = document.getElementById('tabStats');
+            const viewShopfloor = document.getElementById('viewShopfloor');
+            const viewStats = document.getElementById('viewStats');
+
+            tabShopfloor.addEventListener('click', () => {
+                tabShopfloor.classList.add('active');
+                tabStats.classList.remove('active');
+                viewShopfloor.classList.remove('hidden');
+                viewStats.classList.add('hidden');
+            });
+
+            tabStats.addEventListener('click', () => {
+                tabStats.classList.add('active');
+                tabShopfloor.classList.remove('active');
+                viewStats.classList.remove('hidden');
+                viewShopfloor.classList.add('hidden');
+                if (!leadTimeChart) initCharts();
+            });
+
+            /* ==========================================================================
+               BASE DE DADOS DE CARTÕES E PEÇAS DA FERRAMENTARIA
+               ========================================================================== */
+            const cardData = {
+                'P517': {
+                    id: 'P517',
+                    tipo: 'PROJETO',
+                    ferramental: 'Mola 23153',
+                    data: '27/03/2026',
+                    operacoes: ['PREPARAÇÃO', 'TORNO', 'FRESA', 'BANCADA', 'TRATAMENTO', 'RETÍFICA', 'FIO - CUT20'],
+                    itens: [
+                        { rg: 'D815', qtd: 1, des: '92_0014_4064', desc: 'Calibrador de forma das orelhas' },
+                        { rg: 'D816', qtd: 1, des: '98_0076_0001', desc: 'Pinça A17 D' },
+                        { rg: 'D817', qtd: 1, des: '98_0076_0002', desc: 'Pinça A17 E' },
+                        { rg: 'D818', qtd: 1, des: '98_0076_0003', desc: 'Pinça A5' },
+                        { rg: 'D819', qtd: 1, des: '98_0076_0004', desc: 'Pinça A10' },
+                        { rg: 'D820', qtd: 1, des: '98_0076_0005', desc: 'Pinça A7 (D) Pino central Ø17,6' },
+                        { rg: 'D821', qtd: 1, des: '98_0076_0006', desc: 'Pinça A7 (E) Pino central Ø17,6' },
+                        { rg: 'D822', qtd: 1, des: '98_0076_0008', desc: 'Pinça A7 (D) Pino central Ø17,6' }
+                    ]
+                },
+                'M34': {
+                    id: 'M34',
+                    tipo: 'MANUT/QUAL/ALIC',
+                    ferramental: 'Dispositivo / Prensa',
+                    data: '24/03/2025',
+                    operacoes: ['PREPARAÇÃO', 'TORNO', 'FRESA', 'BANCADA', 'TRATAMENTO', 'RETÍFICA'],
+                    itens: [
+                        { rg: 'M782', qtd: 1, des: 'A0060036', desc: 'Suporte da mola (braço articulado)' },
+                        { rg: 'M783', qtd: 10, des: 'A0060040', desc: 'Fixador da mola' },
+                        { rg: 'M784', qtd: 1, des: 'A0070008', desc: 'Porca do regulador de pressão' },
+                        { rg: 'M785', qtd: 1, des: 'A0070009', desc: 'Regulador de Pressão' },
+                        { rg: 'M786', qtd: 1, des: 'A0070011', desc: 'Eixo do rolamento' },
+                        { rg: 'M787', qtd: 1, des: 'A0070014', desc: 'Placa de arraste do carro' }
+                    ]
+                },
+                'R702': {
+                    id: 'R702',
+                    tipo: 'REPOSIÇÃO',
+                    ferramental: 'Carcaça AR (RSFC)',
+                    data: '12/03/2026',
+                    operacoes: ['PREPARAÇÃO', 'FRESA', 'TRATAMENTO', 'RETÍFICA', 'FIO - ROBOFIL'],
+                    itens: [
+                        { rg: 'D759', qtd: 20, des: '10_070_131', desc: 'Macho de Furo Retangular' }
+                    ]
+                },
+                'R703': {
+                    id: 'R703',
+                    tipo: 'REPOSIÇÃO',
+                    ferramental: 'Comb. c/ Trava L23 x 1,5',
+                    data: '13/03/2026',
+                    operacoes: ['PREPARAÇÃO', 'TORNO', 'FRESA', 'TRATAMENTO', 'RETÍFICA'],
+                    itens: [
+                        { rg: 'D761', qtd: 3, des: '75_0450_5014', desc: 'Punção Formador da trava' },
+                        { rg: 'D762', qtd: 3, des: '75_0470_5014', desc: 'Punção Formador da Trava' },
+                        { rg: 'D763', qtd: 3, des: '75_0471_5014', desc: 'Punção Formador da Trava' }
+                    ]
+                },
+                'M44': {
+                    id: 'M44',
+                    tipo: 'MANUTENÇÃO',
+                    ferramental: 'Máquina de Solda / Alicate',
+                    data: '24/03/2025',
+                    operacoes: ['PREPARAÇÃO', 'FRESA', 'BANCADA'],
+                    itens: [
+                        { rg: 'M91', qtd: 1, des: 'Eixo trasmissor 1ª esteira', desc: 'Eixo transmissor automáticas' }
+                    ]
+                },
+                'P95': {
+                    id: 'P95',
+                    tipo: 'PROJ. NOVO',
+                    ferramental: 'Mola 16120 Standard',
+                    data: '11/09/2024',
+                    operacoes: ['PREPARAÇÃO', 'FRESA', 'BANCADA', 'RETÍFICA'],
+                    itens: [
+                        { rg: 'L740', qtd: 1, des: '41_110_227', desc: 'Suporte Guia da entrada MP (GRM 50)' },
+                        { rg: 'L741', qtd: 1, des: '41_110_226', desc: 'Gatilho de conformação' }
+                    ]
+                },
+                'R705': {
+                    id: 'R705',
+                    tipo: 'REPOSIÇÃO',
+                    ferramental: 'Ajan 90.5 StepLess',
+                    data: '13/03/2026',
+                    operacoes: ['PREPARAÇÃO', 'FRESA', 'TRATAMENTO', 'FIO - ROBOFIL'],
+                    itens: [
+                        { rg: 'D765', qtd: 1, des: '20140117_B', desc: 'Postiço pos.07' }
+                    ]
+                },
+                'R706': {
+                    id: 'R706',
+                    tipo: 'REPOSIÇÃO',
+                    ferramental: 'Garfo BR Automáticas AR',
+                    data: '13/03/2026',
+                    operacoes: ['PREPARAÇÃO', 'FRESA', 'TRATAMENTO', 'RETÍFICA'],
+                    itens: [
+                        { rg: 'D766', qtd: 3, des: '11_0010_530', desc: 'Punção de corte' }
+                    ]
+                }
+            };
+
+            // ESTADO DA SIMULAÇÃO DO QUADRO KANBAN
+            let currentMode = '2025'; // '2025' ou '2023'
+            let isRunning = true;
+            let animSpeed = 1;
+            let selectedCardId = 'P517';
+            let finishedCount = 42;
+            let drumProgress = 0.65;
+
+            // Alocação inicial dos cartões nas 4 raias
+            let boardColumns = {
+                planned: ['P517', 'R702', 'M44'],
+                buy: ['R703'],
+                running: ['M34', 'P95'],
+                refill: ['R705', 'R706']
+            };
+
+            // Caixas plásticas no carrinho (Buffer)
+            let cartBoxes = [
+                { id: 'P517', label: 'CX 1 (P517)', desc: 'Calibrador Mola' },
+                { id: 'M34', label: 'CX 2 (M34)', desc: 'Fixador Mola' },
+                { id: 'R702', label: 'CX 3 (R702)', desc: 'Macho Furo' },
+                { id: 'R703', label: 'CX 4 (R703)', desc: 'Punção Trava' },
+                { id: 'P95', label: 'CX 5 (P95)', desc: 'Guia MP' },
+                { id: 'R705', label: 'CX 6 (R705)', desc: 'Postiço StepLess' }
+            ];
+
+            // Renderizar detalhe do cartão na ficha técnica
+            window.selectCard = function(id) {
+                selectedCardId = id;
+                const data = cardData[id] || cardData['P517'];
+                document.getElementById('detCardId').textContent = data.id;
+                document.getElementById('detCardType').textContent = data.tipo;
+                document.getElementById('detCardFerramental').textContent = `Ferramental: ${data.ferramental}`;
+
+                let html = `
+                    <div class="mb-2">
+                        <span class="text-cae-muted">Data: ${data.data} | Roteiro Operacional:</span>
+                        <div class="flex flex-wrap gap-1 mt-1">
+                            ${data.operacoes.map(op => `<span class="px-2 py-0.5 rounded bg-cae-bg border border-cae-border text-[10px] text-cae-teal font-bold">${op}</span>`).join('')}
+                        </div>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-[11px] border-collapse mt-2">
+                            <thead>
+                                <tr class="border-b border-cae-border text-cae-muted">
+                                    <th class="py-1">RG</th>
+                                    <th class="py-1">QTD</th>
+                                    <th class="py-1">Nº Desenho</th>
+                                    <th class="py-1">Descrição da Peça</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-cae-border/40">
+                                ${data.itens.map(it => `
+                                    <tr>
+                                        <td class="py-1 font-bold text-cae-amber">${it.rg}</td>
+                                        <td class="py-1">${it.qtd}</td>
+                                        <td class="py-1 text-cae-text">${it.des}</td>
+                                        <td class="py-1 text-cae-muted">${it.desc}</td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                `;
+                document.getElementById('detCardContent').innerHTML = html;
+                renderBoardCards();
+            };
+
+            function createCardEl(id, isMoving = false) {
+                const data = cardData[id] || { id: id, tipo: 'PROJETO', ferramental: 'Usinagem', itens: [{ desc: 'Componentes' }] };
+                const isSel = id === selectedCardId;
+                const cardEl = document.createElement('div');
+                cardEl.className = `ticket-card p-2 text-xs font-mono ${isSel ? 'selected' : ''} ${isMoving ? 'moving' : ''}`;
+                cardEl.onclick = () => window.selectCard(id);
+
+                let badgeColor = data.tipo.includes('PROJ') ? 'text-cae-teal' : (data.tipo.includes('REPOS') ? 'text-cae-amber' : 'text-purple-400');
+
+                cardEl.innerHTML = `
+                    <div class="flex justify-between items-center text-[10px] pb-1 border-b border-cae-border/50">
+                        <span class="font-bold ${badgeColor}">${data.id}</span>
+                        <span class="text-cae-muted">${data.tipo}</span>
+                    </div>
+                    <div class="font-bold text-cae-text mt-1 truncate">${data.itens[0]?.desc || 'Componentes de Usinagem'}</div>
+                    <div class="text-[9.5px] text-cae-muted truncate mt-0.5">${data.ferramental}</div>
+                `;
+                return cardEl;
+            }
+
+            function renderBoardCards() {
+                const pPlanned = document.getElementById('pocketPlanned');
+                const pBuy = document.getElementById('pocketBuy');
+                const pRunning = document.getElementById('pocketRunning');
+                const pRefill = document.getElementById('pocketRefill');
+
+                pPlanned.innerHTML = '';
+                pBuy.innerHTML = '';
+                pRunning.innerHTML = '';
+                pRefill.innerHTML = '';
+
+                boardColumns.planned.forEach(id => pPlanned.appendChild(createCardEl(id)));
+                boardColumns.buy.forEach(id => pBuy.appendChild(createCardEl(id)));
+                boardColumns.running.forEach(id => pRunning.appendChild(createCardEl(id)));
+                boardColumns.refill.forEach(id => pRefill.appendChild(createCardEl(id)));
+
+                document.getElementById('badgePlanCount').textContent = boardColumns.planned.length;
+            }
+
+            function renderCartBoxes() {
+                const container = document.getElementById('boxStackContainer');
+                container.innerHTML = '';
+                const count = cartBoxes.length;
+
+                document.getElementById('cartCountBadge').textContent = `(${count} caixas)`;
+                document.getElementById('kpiWipCount').textContent = count;
+
+                cartBoxes.forEach((b, idx) => {
+                    const isOverflow = idx >= 10;
+                    const el = document.createElement('div');
+                    el.className = `klt-box ${isOverflow ? 'overflow' : ''}`;
+                    el.innerHTML = `
+                        <span>${b.label}</span>
+                        <span class="text-[9px] opacity-75">${b.desc}</span>
+                    `;
+                    container.appendChild(el);
+                });
+
+                // Atualizar status do Farol e do Banner
+                const farolRed = document.getElementById('farolRed');
+                const farolAmber = document.getElementById('farolAmber');
+                const farolGreen = document.getElementById('farolGreen');
+                const farolText = document.getElementById('farolText');
+                const wipDot = document.getElementById('wipAlertDot');
+                const wipMsg = document.getElementById('wipAlertMsg');
+                const kpiStatus = document.getElementById('kpiWipStatus');
+
+                farolRed.className = 'farol-bulb';
+                farolAmber.className = 'farol-bulb';
+                farolGreen.className = 'farol-bulb';
+
+                if (count > 10) {
+                    farolRed.className = 'farol-bulb active-red';
+                    farolText.textContent = 'Farol Vermelho: STOP KANBAN!';
+                    farolText.className = 'text-xs font-mono font-bold text-cae-danger';
+                    wipDot.className = 'w-3 h-3 rounded-full bg-cae-danger animate-ping';
+                    wipMsg.innerHTML = '<strong class="text-cae-danger">REGRA DAS 10 CAIXAS ATINGIDA:</strong> Parar abastecimento! Excesso de WIP no posto.';
+                    kpiStatus.textContent = 'Sobrecarga WIP (>10)';
+                    kpiStatus.className = 'text-[11px] font-mono text-cae-danger font-bold';
+                } else if (count >= 8) {
+                    farolAmber.className = 'farol-bulb active-amber';
+                    farolText.textContent = 'Farol Âmbar: Atenção ao Takt';
+                    farolText.className = 'text-xs font-mono font-bold text-cae-amber';
+                    wipDot.className = 'w-3 h-3 rounded-full bg-cae-amber';
+                    wipMsg.innerHTML = '<span class="text-cae-amber">Atenção:</span> Buffer se aproximando do limite de 10 caixas.';
+                    kpiStatus.textContent = 'Buffer Limítrofe';
+                    kpiStatus.className = 'text-[11px] font-mono text-cae-amber font-bold';
+                } else {
+                    farolGreen.className = 'farol-bulb active-green';
+                    farolText.textContent = 'Farol Verde: Pode Usinar';
+                    farolText.className = 'text-xs font-mono font-bold text-cae-teal';
+                    wipDot.className = 'w-3 h-3 rounded-full bg-cae-teal';
+                    wipMsg.innerHTML = '<span class="text-cae-teal">Fluxo Linear Estável:</span> Buffer sob controle com metodologia DBR.';
+                    kpiStatus.textContent = 'Buffer Saudável (DBR)';
+                    kpiStatus.className = 'text-[11px] font-mono text-cae-teal font-bold';
+                }
+            }
+
+            /* ==========================================================================
+               DINÂMICA DE MOVIMENTAÇÃO DE CARTÕES & DRUM-BUFFER-ROPE
+               ========================================================================== */
+            function moveCardForward() {
+                // 1. Concluir item da coluna 'running' para 'refill'
+                if (boardColumns.running.length > 0) {
+                    const doneCard = boardColumns.running.shift();
+                    boardColumns.refill.push(doneCard);
+                }
+
+                // 2. Operador compra o próximo cartão de 'buy' para 'running'
+                if (boardColumns.buy.length > 0) {
+                    const boughtCard = boardColumns.buy.shift();
+                    boardColumns.running.push(boughtCard);
+                }
+
+                // 3. Puxar novo cartão de 'planned' para 'buy' (se permitido pelo Rope)
+                if (boardColumns.planned.length > 0) {
+                    if (currentMode === '2025' && cartBoxes.length <= 10) {
+                        const nextCard = boardColumns.planned.shift();
+                        boardColumns.buy.push(nextCard);
+                    } else if (currentMode === '2023') {
+                        // Em 2023 não havia restrição pelo Rope: empurrava direto!
+                        const nextCard = boardColumns.planned.shift();
+                        boardColumns.buy.push(nextCard);
+                    }
+                } else {
+                    // Reciclar cartões de refill de volta para planned quando esgotar
+                    if (boardColumns.refill.length > 0) {
+                        const recycled = boardColumns.refill.shift();
+                        boardColumns.planned.push(recycled);
+                    }
+                }
+
+                // Atualizar caixas do carrinho
+                if (currentMode === '2023') {
+                    // Modo empurrado: gera mais caixas do que consome (buffer explode > 10)
+                    if (cartBoxes.length < 13) {
+                        cartBoxes.push({
+                            id: 'R' + Math.floor(700 + Math.random() * 20),
+                            label: `CX ${cartBoxes.length + 1} (WIP)`,
+                            desc: 'Peça sem ordenação'
+                        });
+                    }
+                } else {
+                    // Modo 2025: mantém buffer controlado entre 5 e 8 caixas
+                    if (cartBoxes.length > 8) {
+                        cartBoxes.pop();
+                    } else if (cartBoxes.length < 5) {
+                        cartBoxes.push({
+                            id: 'P517',
+                            label: `CX ${cartBoxes.length + 1} (P517)`,
+                            desc: 'Calibrador Mola'
+                        });
+                    }
+                }
+
+                renderBoardCards();
+                renderCartBoxes();
+            }
+
+            // AÇÃO DO TAMBOR (DRUM TAKT): O gargalo consome uma caixa e libera capacidade
+            function executeDrumTakt() {
+                finishedCount++;
+                document.getElementById('statFinishedCount').textContent = `${finishedCount} pçs`;
+
+                if (cartBoxes.length > 0) {
+                    cartBoxes.pop();
+                    renderCartBoxes();
+                }
+
+                // Efeito do Rope: ao concluir no Tambor, libera 1 novo cartão no quadro
+                moveCardForward();
+            }
+
+            // CONTROLES DE SIMULAÇÃO
+            const btnPlayPause = document.getElementById('btnPlayPause');
+            const btnInject = document.getElementById('btnInjectOrder');
+            const btnDrumTakt = document.getElementById('btnDrumTakt');
+            const btnCen2025 = document.getElementById('btnCenario2025');
+            const btnCen2023 = document.getElementById('btnCenario2023');
+            const selAnimSpeed = document.getElementById('selAnimSpeed');
+
+            btnPlayPause.addEventListener('click', () => {
+                isRunning = !isRunning;
+                btnPlayPause.textContent = isRunning ? '⏸ Pausar Simulação' : '▶ Iniciar Fluxo';
+            });
+
+            btnInject.addEventListener('click', () => {
+                const newId = 'P' + Math.floor(100 + Math.random() * 900);
+                boardColumns.planned.push(newId);
+                cartBoxes.push({
+                    id: newId,
+                    label: `CX ${cartBoxes.length + 1} (${newId})`,
+                    desc: 'Lote Novo'
+                });
+                renderBoardCards();
+                renderCartBoxes();
+            });
+
+            btnDrumTakt.addEventListener('click', () => {
+                executeDrumTakt();
+            });
+
+            selAnimSpeed.addEventListener('change', () => {
+                animSpeed = parseFloat(selAnimSpeed.value);
+            });
+
+            btnCen2025.addEventListener('click', () => {
+                currentMode = '2025';
+                btnCen2025.className = 'px-3 py-1 rounded bg-cae-teal text-cae-bg font-bold transition';
+                btnCen2023.className = 'px-3 py-1 rounded text-cae-muted hover:text-cae-text font-bold transition';
+                cartBoxes = cartBoxes.slice(0, 6);
+                renderBoardCards();
+                renderCartBoxes();
+            });
+
+            btnCen2023.addEventListener('click', () => {
+                currentMode = '2023';
+                btnCen2023.className = 'px-3 py-1 rounded bg-red-500 text-white font-bold transition';
+                btnCen2025.className = 'px-3 py-1 rounded text-cae-muted hover:text-cae-text font-bold transition';
+                // Adiciona caixas em excesso para simular o estouro do buffer
+                while (cartBoxes.length < 12) {
+                    cartBoxes.push({
+                        id: 'M99',
+                        label: `CX ${cartBoxes.length + 1} (Excesso)`,
+                        desc: 'WIP Acumulado'
+                    });
+                }
+                renderBoardCards();
+                renderCartBoxes();
+            });
+
+            // Loop de Takt Time do Drum e da Animação
+            let lastCycle = performance.now();
+            function simLoop(time) {
+                if (isRunning) {
+                    const elapsed = (time - lastCycle) / 1000;
+                    drumProgress += (elapsed * 0.35 * animSpeed);
+
+                    if (drumProgress >= 1.0) {
+                        drumProgress = 0;
+                        executeDrumTakt();
+                    }
+
+                    document.getElementById('drumTaktPct').textContent = `${Math.round(drumProgress * 100)}%`;
+                    document.getElementById('drumProgressBar').style.width = `${Math.round(drumProgress * 100)}%`;
+                    lastCycle = time;
+                }
+                requestAnimationFrame(simLoop);
+            }
+
+            requestAnimationFrame(simLoop);
+
+            /* ==========================================================================
+               GRÁFICOS CHART.JS (ABA DE ESTATÍSTICA 2023-2025)
+               ========================================================================== */
+            let leadTimeChart = null;
+            let gaussianChart = null;
+
+            function initCharts() {
+                const c = getThemeColors();
+
+                leadTimeChart = new Chart(document.getElementById('chartLeadTime').getContext('2d'), {
+                    type: 'bar',
+                    data: {
+                        labels: ['2023 (Inicial)', '2024 (Implantação)', '2025 (Sob Controle)'],
+                        datasets: [
+                            {
+                                label: 'Lead Time Médio (Dias de Entrega / Peça)',
+                                data: [38, 30, 14],
+                                backgroundColor: [c.danger, c.amber, c.teal],
+                                borderRadius: 6,
+                                barPercentage: 0.55
+                            },
+                            {
+                                label: 'Desvio Padrão (±σ)',
+                                data: [106, 38, 5],
+                                type: 'line',
+                                borderColor: c.amber,
+                                backgroundColor: 'transparent',
+                                borderWidth: 2.5,
+                                pointBackgroundColor: c.amber,
+                                pointRadius: 5
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            x: { ticks: { color: c.muted, font: { family: 'JetBrains Mono', size: 10 } }, grid: { display: false } },
+                            y: { ticks: { color: c.muted, font: { family: 'JetBrains Mono', size: 10 } }, grid: { color: c.grid } }
+                        },
+                        plugins: {
+                            legend: { position: 'bottom', labels: { color: c.text, boxWidth: 10, font: { size: 10 } } }
+                        }
+                    }
+                });
+
+                const xVals = [];
+                for (let x = 0; x <= 80; x += 1) xVals.push(x);
+
+                function normalPdf(x, mean, sigma) {
+                    return (1 / (sigma * Math.sqrt(2 * Math.PI))) * Math.exp(-0.5 * Math.pow((x - mean) / sigma, 2));
+                }
+
+                const y2023 = xVals.map(x => normalPdf(x, 38, 106));
+                const y2024 = xVals.map(x => normalPdf(x, 30, 38));
+                const y2025 = xVals.map(x => normalPdf(x, 14, 5));
+
+                gaussianChart = new Chart(document.getElementById('chartGaussian').getContext('2d'), {
+                    type: 'line',
+                    data: {
+                        labels: xVals.map(String),
+                        datasets: [
+                            {
+                                label: '2023 (µ=38, σ=106d)',
+                                data: y2023,
+                                borderColor: c.danger,
+                                borderWidth: 1.8,
+                                borderDash: [4, 4],
+                                fill: false,
+                                pointRadius: 0
+                            },
+                            {
+                                label: '2024 (µ=30, σ=38d)',
+                                data: y2024,
+                                borderColor: c.amber,
+                                borderWidth: 2,
+                                fill: false,
+                                pointRadius: 0
+                            },
+                            {
+                                label: '2025 (µ=14, σ=5d)',
+                                data: y2025,
+                                borderColor: c.teal,
+                                backgroundColor: 'rgba(20, 184, 166, 0.15)',
+                                borderWidth: 2.8,
+                                fill: true,
+                                pointRadius: 0
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            x: { ticks: { color: c.muted, maxTicksLimit: 9, font: { family: 'JetBrains Mono', size: 10 } }, grid: { color: c.grid } },
+                            y: { ticks: { color: c.muted, font: { family: 'JetBrains Mono', size: 10 } }, grid: { color: c.grid } }
+                        },
+                        plugins: {
+                            legend: { position: 'bottom', labels: { color: c.text, boxWidth: 10, font: { size: 10 } } }
+                        }
+                    }
+                });
+            }
+
+            themeToggle.addEventListener('click', () => {
+                const next = htmlEl.getAttribute('data-theme') === 'light' ? 'dark' : 'light';
+                htmlEl.setAttribute('data-theme', next);
+                localStorage.setItem('rv_theme', next);
+                syncThemeUi();
+                if (leadTimeChart && gaussianChart) {
+                    const c = getThemeColors();
+                    leadTimeChart.data.datasets[0].backgroundColor = [c.danger, c.amber, c.teal];
+                    leadTimeChart.data.datasets[1].borderColor = c.amber;
+                    leadTimeChart.update('none');
+                    gaussianChart.data.datasets[0].borderColor = c.danger;
+                    gaussianChart.data.datasets[1].borderColor = c.amber;
+                    gaussianChart.data.datasets[2].borderColor = c.teal;
+                    gaussianChart.update('none');
+                }
+            });
+
+            syncThemeUi();
+            selectCard('P517');
+            renderBoardCards();
+            renderCartBoxes();
+        })();
+    </script>
+</body>
+</html>

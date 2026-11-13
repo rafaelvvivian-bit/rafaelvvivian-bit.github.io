@@ -1,0 +1,762 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Análise DIN 3021 &amp; Simulação de Monte Carlo — Mangueira + Niple</title>
+    <script>
+        (function() {
+            const savedTheme = localStorage.getItem('rv_theme') || 'dark';
+            document.documentElement.setAttribute('data-theme', savedTheme);
+        })();
+    </script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'system-ui', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    },
+                    colors: {
+                        cae: {
+                            bg: 'var(--cae-bg)',
+                            surface: 'var(--cae-surface)',
+                            text: 'var(--cae-text)',
+                            muted: 'var(--cae-muted)',
+                            teal: 'var(--cae-teal)',
+                            amber: 'var(--cae-amber)',
+                            border: 'var(--cae-border)'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        /* Paleta 2: CAE / von Mises Spectrum */
+        :root, [data-theme="dark"] {
+            --cae-bg: #090E17;
+            --cae-surface: #131E31;
+            --cae-panel-bg: rgba(19, 30, 49, 0.86);
+            --cae-text: #F8FAFC;
+            --cae-muted: #94A3B8;
+            --cae-primary: #14B8A6;
+            --cae-teal: #2DD4BF;
+            --cae-amber: #F59E0B;
+            --cae-danger: #F87171;
+            --cae-border: rgba(148, 163, 184, 0.16);
+            --cae-track: rgba(148, 163, 184, 0.20);
+            --cae-grid: rgba(148, 163, 184, 0.14);
+            --cae-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.72);
+            --cae-slider-grad-start: #14B8A6;
+            --cae-slider-grad-end: #F59E0B;
+        }
+
+        [data-theme="light"] {
+            --cae-bg: #F6F7F9;
+            --cae-surface: #FFFFFF;
+            --cae-panel-bg: rgba(255, 255, 255, 0.92);
+            --cae-text: #0F172A;
+            --cae-muted: #64748B;
+            --cae-primary: #0F3D5E;
+            --cae-teal: #0D9488;
+            --cae-amber: #D97706;
+            --cae-danger: #DC2626;
+            --cae-border: rgba(15, 23, 42, 0.14);
+            --cae-track: rgba(15, 23, 42, 0.12);
+            --cae-grid: rgba(15, 23, 42, 0.10);
+            --cae-shadow: 0 12px 32px -8px rgba(15, 23, 42, 0.09);
+            --cae-slider-grad-start: #0F3D5E;
+            --cae-slider-grad-end: #0D9488;
+        }
+
+        body {
+            background-color: var(--cae-bg);
+            color: var(--cae-text);
+            background-image: radial-gradient(circle at top right, rgba(20, 184, 166, 0.07), transparent 40%),
+                              radial-gradient(circle at bottom left, rgba(245, 158, 11, 0.05), transparent 40%);
+            overflow-x: hidden;
+            transition: background-color 0.25s ease, color 0.25s ease;
+        }
+
+        .glass-panel {
+            background: var(--cae-panel-bg);
+            backdrop-filter: blur(12px);
+            border: 1px solid var(--cae-border);
+            box-shadow: var(--cae-shadow);
+            border-radius: 16px;
+        }
+
+        .hmi-slider-container { position: relative; padding: 6px 0; }
+        input[type=range] {
+            -webkit-appearance: none; width: 100%; background: transparent; position: relative; z-index: 5;
+        }
+        input[type=range]:focus { outline: none; }
+        input[type=range]:focus-visible::-webkit-slider-thumb {
+            box-shadow: 0 0 0 3px var(--cae-surface), 0 0 0 6px var(--cae-amber);
+        }
+        input[type=range]::-webkit-slider-runnable-track {
+            width: 100%; height: 6px; cursor: pointer; background: var(--cae-track); border-radius: 3px;
+        }
+        input[type=range]::-webkit-slider-thumb {
+            height: 18px; width: 18px; border-radius: 50%; background: var(--cae-surface); cursor: pointer;
+            -webkit-appearance: none; margin-top: -6px;
+            box-shadow: 0 0 8px rgba(0, 0, 0, 0.35), 0 0 0 3px var(--cae-surface), 0 0 0 4px var(--cae-teal);
+            transition: transform 0.2s ease;
+        }
+        input[type=range]::-webkit-slider-thumb:hover { transform: scale(1.15); }
+        .slider-fill {
+            position: absolute; top: 12px; left: 0; height: 6px;
+            background: linear-gradient(90deg, var(--cae-slider-grad-start), var(--cae-slider-grad-end));
+            border-radius: 3px; pointer-events: none; transition: width 0.08s linear;
+        }
+
+        .mode-btn.active {
+            border-color: var(--cae-teal);
+            background: rgba(20, 184, 166, 0.14);
+            color: var(--cae-teal);
+        }
+
+        .limit-btn.active {
+            border-color: var(--cae-amber);
+            background: rgba(245, 158, 11, 0.15);
+            color: var(--cae-amber);
+        }
+    </style>
+</head>
+<body class="min-h-screen p-3 md:p-4 flex flex-col font-sans">
+
+    <!-- HEADER -->
+    <header class="glass-panel px-5 py-2.5 mb-3.5 flex flex-wrap justify-between items-center gap-3">
+        <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-lg bg-cae-surface border border-cae-border flex items-center justify-center shadow-lg relative overflow-hidden">
+                <div class="absolute inset-0 bg-cae-teal/20"></div>
+                <svg class="w-5 h-5 text-cae-teal relative z-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+                </svg>
+            </div>
+            <div>
+                <h1 class="text-base md:text-lg font-extrabold tracking-tight text-cae-text">
+                    ANÁLISE DE CONJUNTO <span class="text-cae-teal">DIN 3021</span> &amp; <span class="text-cae-amber">MONTE CARLO</span>
+                </h1>
+                <p class="text-[11px] font-mono text-cae-muted uppercase tracking-wider">
+                    Conjunto Mangueira + Niple + Abraçadeira • Projeto MQB • Auditoria Estatística de Tolerâncias &amp; Cpk
+                </p>
+            </div>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-2">
+            <a href="../index.html#cases" class="px-3 py-1.5 rounded-full bg-cae-surface border border-cae-border text-xs font-mono font-bold text-cae-muted hover:text-cae-teal hover:border-cae-teal transition">
+                &larr; Portfólio
+            </a>
+            <button id="themeToggle" type="button" aria-label="Alternar tema Claro e Escuro" class="flex items-center gap-2 px-3 py-1.5 rounded-full bg-cae-surface border border-cae-border text-xs font-mono font-bold text-cae-text hover:border-cae-teal transition">
+                <svg id="sunIcon" class="w-4 h-4 hidden text-cae-amber" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="5" stroke-width="2"/><line x1="12" y1="1" x2="12" y2="3" stroke-width="2"/><line x1="12" y1="21" x2="12" y2="23" stroke-width="2"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64" stroke-width="2"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78" stroke-width="2"/><line x1="1" y1="12" x2="3" y2="12" stroke-width="2"/><line x1="21" y1="12" x2="23" y2="12" stroke-width="2"/></svg>
+                <svg id="moonIcon" class="w-4 h-4 text-cae-teal" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg>
+                <span id="themeText">Tema</span>
+            </button>
+            <div class="hidden sm:flex items-center gap-2 px-3 py-1 rounded-full bg-cae-bg border border-cae-border text-xs font-mono">
+                <span class="w-2 h-2 rounded-full bg-cae-teal animate-pulse"></span>
+                <span class="text-cae-muted">Monte Carlo N = 3.000</span>
+            </div>
+        </div>
+    </header>
+
+    <main class="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-3.5">
+
+        <!-- COLUNA ESQUERDA (5 Cols): ESQUEMA GEOMÉTRICO DIN 3021 + TABELA INTERFERÊNCIA -->
+        <section class="lg:col-span-5 flex flex-col gap-3.5">
+            <div class="glass-panel p-4 flex flex-col justify-between">
+                <div class="flex flex-wrap items-center justify-between gap-2 mb-2.5">
+                    <div>
+                        <span class="text-[11px] font-mono font-bold text-cae-amber uppercase tracking-wider">Geometria de Montagem • DIN 3021</span>
+                        <h2 class="text-sm font-bold text-cae-text">Seção Mangueira (di, p) × Niple (ds, dw)</h2>
+                    </div>
+                    <span id="fitStatusBadge" class="px-2.5 py-0.5 rounded-full text-[11px] font-mono font-bold bg-emerald-500/15 text-cae-teal border border-cae-teal/30">
+                        Interferência Positiva
+                    </span>
+                </div>
+
+                <!-- SVG PARAMÉTRICO DA JUNTA MANGUEIRA + NIPLE -->
+                <div class="bg-cae-bg/85 border border-cae-border rounded-xl p-3 flex items-center justify-center min-h-[195px]">
+                    <svg id="jointSvg" viewBox="0 0 420 190" class="w-full max-w-[420px] h-auto" role="img" aria-label="Diagrama esquemático de montagem Mangueira sobre Niple DIN 3021">
+                        <!-- Linha de Centro -->
+                        <line x1="15" y1="95" x2="405" y2="95" stroke="var(--cae-muted)" stroke-width="1" stroke-dasharray="6,4" opacity="0.6"/>
+
+                        <!-- Niple Metálico (Haste ds e Ressalto/Bead dw) -->
+                        <path id="svgNippleBody" d="M 35,55 L 250,55 L 265,47 L 285,47 L 300,55 L 350,55 L 350,135 L 300,135 L 285,143 L 265,143 L 250,135 L 35,135 Z" fill="rgba(148,163,184,0.22)" stroke="var(--cae-muted)" stroke-width="1.8"/>
+
+                        <!-- Mangueira Elastômero (Parede superior e inferior expandindo sobre ds e dw) -->
+                        <path id="svgHoseTop" d="M 110,33 L 238,33 C 254,33 258,24 275,24 C 292,24 296,33 312,33 L 385,33 L 385,55 L 300,55 L 285,47 L 265,47 L 250,55 L 110,55 Z" fill="rgba(20, 184, 166, 0.25)" stroke="var(--cae-teal)" stroke-width="2"/>
+                        <path id="svgHoseBot" d="M 110,135 L 250,135 L 265,143 L 285,143 L 300,135 L 385,135 L 385,157 L 312,157 C 296,157 292,166 275,166 C 258,166 254,157 238,157 L 110,157 Z" fill="rgba(20, 184, 166, 0.25)" stroke="var(--cae-teal)" stroke-width="2"/>
+
+                        <!-- Abraçadeira Mola na Região Dmin (ds) -->
+                        <rect x="148" y="27" width="48" height="6" rx="2" fill="var(--cae-amber)" opacity="0.9"/>
+                        <rect x="148" y="157" width="48" height="6" rx="2" fill="var(--cae-amber)" opacity="0.9"/>
+
+                        <!-- Cotas Visuais -->
+                        <!-- Dmin -->
+                        <line x1="172" y1="22" x2="172" y2="168" stroke="var(--cae-amber)" stroke-width="1.2" stroke-dasharray="3,2"/>
+                        <rect x="135" y="4" width="74" height="16" rx="4" fill="var(--cae-surface)" stroke="var(--cae-amber)" stroke-width="1"/>
+                        <text id="svgLblDmin" x="172" y="15" text-anchor="middle" fill="var(--cae-amber)" font-family="JetBrains Mono, monospace" font-size="9.5" font-weight="700">Dmin 26.98</text>
+
+                        <!-- Dmax -->
+                        <line x1="275" y1="20" x2="275" y2="170" stroke="var(--cae-teal)" stroke-width="1.2" stroke-dasharray="3,2"/>
+                        <rect x="236" y="170" width="78" height="16" rx="4" fill="var(--cae-surface)" stroke="var(--cae-teal)" stroke-width="1"/>
+                        <text id="svgLblDmax" x="275" y="181" text-anchor="middle" fill="var(--cae-teal)" font-family="JetBrains Mono, monospace" font-size="9.5" font-weight="700">Dmax 28.42</text>
+
+                        <!-- Labels internos -->
+                        <text id="svgLblDs" x="80" y="99" text-anchor="middle" fill="var(--cae-text)" font-family="JetBrains Mono, monospace" font-size="10" font-weight="700">Øds 20.00</text>
+                        <text id="svgLblDw" x="275" y="99" text-anchor="middle" fill="var(--cae-amber)" font-family="JetBrains Mono, monospace" font-size="10" font-weight="700">Ødw 22.40</text>
+                        <text id="svgLblHose" x="346" y="48" text-anchor="middle" fill="var(--cae-teal)" font-family="JetBrains Mono, monospace" font-size="9" font-weight="700">p 3.50</text>
+                    </svg>
+                </div>
+
+                <!-- MATRIZ DE INTERFERÊNCIA (di - ds) -->
+                <div class="mt-3">
+                    <div class="flex items-center justify-between text-[11px] font-mono text-cae-muted mb-1.5">
+                        <span class="uppercase font-bold">Matriz de Interferência (di − ds)</span>
+                        <span id="interfNominalNote">Base DWG vs. Simulado</span>
+                    </div>
+                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center">
+                        <div class="bg-cae-bg border border-cae-border rounded-lg p-2">
+                            <span class="block text-[10px] font-mono text-cae-muted">di_min − ds_max</span>
+                            <strong id="int1" class="text-xs font-mono text-cae-teal">-1.55 mm</strong>
+                        </div>
+                        <div class="bg-cae-bg border border-cae-border rounded-lg p-2">
+                            <span class="block text-[10px] font-mono text-cae-muted">di_min − ds_min</span>
+                            <strong id="int2" class="text-xs font-mono text-cae-teal">-1.25 mm</strong>
+                        </div>
+                        <div class="bg-cae-bg border border-cae-border rounded-lg p-2">
+                            <span class="block text-[10px] font-mono text-cae-muted">di_max − ds_max</span>
+                            <strong id="int3" class="text-xs font-mono text-cae-amber">-0.75 mm</strong>
+                        </div>
+                        <div class="bg-cae-bg border border-cae-border rounded-lg p-2">
+                            <span class="block text-[10px] font-mono text-cae-muted">di_max − ds_min</span>
+                            <strong id="int4" class="text-xs font-mono text-cae-amber">-0.45 mm</strong>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- RESUMO TABELA DO ARTIGO/ESTUDO (COMPARATIVO BASELINE) -->
+            <div class="glass-panel p-4">
+                <div class="flex items-center justify-between gap-2 mb-2">
+                    <h3 class="text-xs font-bold text-cae-muted uppercase tracking-wider">Auditoria Estatística Original (Atual vs. Proposta)</h3>
+                    <span class="text-[10px] font-mono text-cae-amber">Cpk Ref. Normal</span>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse text-[11px] font-mono">
+                        <thead>
+                            <tr class="border-b border-cae-border text-cae-muted">
+                                <th class="py-1.5 pr-2">Característica</th>
+                                <th class="py-1.5 px-2">Atual (µ / σ)</th>
+                                <th class="py-1.5 px-2">Cpk Atual</th>
+                                <th class="py-1.5 px-2">Proposta (µ / σ)</th>
+                                <th class="py-1.5 pl-2">Cpk Prop.</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-cae-border/60">
+                            <tr>
+                                <td class="py-1.5 pr-2 font-bold">Hose di (mm)</td>
+                                <td class="py-1.5 px-2">19.00 / 0.10</td>
+                                <td class="py-1.5 px-2 text-cae-teal">1.40</td>
+                                <td class="py-1.5 px-2">19.25 / 0.10</td>
+                                <td class="py-1.5 pl-2 text-cae-amber font-bold">0.84 ⚠</td>
+                            </tr>
+                            <tr>
+                                <td class="py-1.5 pr-2 font-bold">Hose p (mm)</td>
+                                <td class="py-1.5 px-2">3.50 / 0.10</td>
+                                <td class="py-1.5 px-2 text-cae-amber">1.28</td>
+                                <td class="py-1.5 px-2">3.50 / 0.10</td>
+                                <td class="py-1.5 pl-2 text-cae-teal">1.34</td>
+                            </tr>
+                            <tr>
+                                <td class="py-1.5 pr-2 font-bold">Nipple Øds</td>
+                                <td class="py-1.5 px-2">20.00 / 0.05</td>
+                                <td class="py-1.5 px-2 text-cae-teal">1.38</td>
+                                <td class="py-1.5 px-2">20.00 / 0.05</td>
+                                <td class="py-1.5 pl-2 text-cae-teal font-bold">2.19</td>
+                            </tr>
+                            <tr>
+                                <td class="py-1.5 pr-2 font-bold">Nipple Ødw</td>
+                                <td class="py-1.5 px-2">22.00 / 0.05</td>
+                                <td class="py-1.5 px-2 text-cae-amber">1.15</td>
+                                <td class="py-1.5 px-2">22.40 / 0.05</td>
+                                <td class="py-1.5 pl-2 text-red-400 font-bold">-0.07 ❌</td>
+                            </tr>
+                            <tr>
+                                <td class="py-1.5 pr-2 font-bold">Conj. Dmin</td>
+                                <td class="py-1.5 px-2">26.93 / 0.205</td>
+                                <td class="py-1.5 px-2 text-cae-teal">1.65</td>
+                                <td class="py-1.5 px-2">26.98 / 0.188</td>
+                                <td class="py-1.5 pl-2 text-cae-teal font-bold">1.85</td>
+                            </tr>
+                            <tr>
+                                <td class="py-1.5 pr-2 font-bold">Conj. Dmax</td>
+                                <td class="py-1.5 px-2">28.06 / 0.203</td>
+                                <td class="py-1.5 px-2 text-cae-teal">1.54</td>
+                                <td class="py-1.5 px-2">28.42 / 0.175</td>
+                                <td class="py-1.5 pl-2 text-cae-teal">1.56</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <p class="text-[11px] text-cae-muted mt-2 leading-relaxed">
+                    <strong class="text-cae-amber">Conclusão do Estudo:</strong> Sem a revisão de <strong>LIE e LSE</strong>, o deslocamento nominal de <code>Ødw (22,0 → 22,4 mm)</code> gera <code>Cpk = -0,07</code> e <code>di (19,0 → 19,25 mm)</code> cai para <code>Cpk = 0,84</code>, exigindo redefinição de limites conforme <strong>DIN 3021</strong>.
+                </p>
+            </div>
+        </section>
+
+        <!-- COLUNA DIREITA (7 Cols): CONTROLES MONTE CARLO + KPIs + GRÁFICOS -->
+        <section class="lg:col-span-7 flex flex-col gap-3.5">
+
+            <!-- CONTROLES & KPIs DE SIMULAÇÃO -->
+            <div class="glass-panel p-4">
+                <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
+                    <div class="flex flex-wrap items-center gap-1.5">
+                        <button type="button" id="presetProposalOld" class="mode-btn active px-2.5 py-1 rounded-lg border border-cae-border text-[11px] font-mono font-bold transition">
+                            1. Proposta (LIE/LSE Antigos)
+                        </button>
+                        <button type="button" id="presetProposalRev" class="mode-btn px-2.5 py-1 rounded-lg border border-cae-border text-[11px] font-mono font-bold text-cae-muted transition">
+                            2. Proposta (LIE/LSE Revisados)
+                        </button>
+                        <button type="button" id="presetDwg24" class="mode-btn px-2.5 py-1 rounded-lg border border-cae-border text-[11px] font-mono font-bold text-cae-muted transition">
+                            3. Envelope Ø24×3,5
+                        </button>
+                    </div>
+                    <button type="button" id="runMcBtn" class="px-3 py-1 rounded-lg bg-cae-bg border border-cae-teal/60 text-[11px] font-mono font-bold text-cae-teal hover:bg-cae-teal/15 transition">
+                        ↻ Nova Rodada Monte Carlo
+                    </button>
+                </div>
+
+                <!-- 4 KPIs EM TEMPO REAL -->
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5 mb-3.5">
+                    <div class="bg-cae-bg/85 border border-cae-border rounded-xl px-3 py-2">
+                        <span class="block text-[10px] text-cae-muted uppercase font-bold">Dmin Médio (Sim.)</span>
+                        <span id="kpiDmin" class="text-lg font-mono font-extrabold text-cae-teal">26.79 mm</span>
+                    </div>
+                    <div class="bg-cae-bg/85 border border-cae-border rounded-xl px-3 py-2">
+                        <span class="block text-[10px] text-cae-muted uppercase font-bold">Dmax Médio (Sim.)</span>
+                        <span id="kpiDmax" class="text-lg font-mono font-extrabold text-cae-amber">28.60 mm</span>
+                    </div>
+                    <div class="bg-cae-bg/85 border border-cae-border rounded-xl px-3 py-2">
+                        <span class="block text-[10px] text-cae-muted uppercase font-bold">Cpk Crítico (Ødw)</span>
+                        <span id="kpiCpkDw" class="text-lg font-mono font-extrabold text-red-400">-0.07</span>
+                    </div>
+                    <div class="bg-cae-bg/85 border border-cae-border rounded-xl px-3 py-2">
+                        <span class="block text-[10px] text-cae-muted uppercase font-bold">Taxa OK (Conjunto)</span>
+                        <span id="kpiYield" class="text-lg font-mono font-extrabold text-cae-text">54.2%</span>
+                    </div>
+                </div>
+
+                <!-- SLIDERS PARAMÉTRICOS -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2">
+                    <div>
+                        <div class="flex justify-between items-end mb-0.5">
+                            <label for="slDi" class="text-[11px] font-bold text-cae-text uppercase">Mangueira di (µ)</label>
+                            <span id="valDi" class="font-mono text-cae-teal text-xs font-bold">19.25 mm (σ 0.10)</span>
+                        </div>
+                        <div class="hmi-slider-container">
+                            <div class="slider-fill" id="fillDi" style="width: 35%;"></div>
+                            <input type="range" id="slDi" min="18.0" max="25.0" step="0.05" value="19.25">
+                        </div>
+                    </div>
+
+                    <div>
+                        <div class="flex justify-between items-end mb-0.5">
+                            <label for="slP" class="text-[11px] font-bold text-cae-text uppercase">Parede p (µ)</label>
+                            <span id="valP" class="font-mono text-cae-teal text-xs font-bold">3.50 mm (σ 0.10)</span>
+                        </div>
+                        <div class="hmi-slider-container">
+                            <div class="slider-fill" id="fillP" style="width: 50%;"></div>
+                            <input type="range" id="slP" min="2.5" max="4.5" step="0.05" value="3.50">
+                        </div>
+                    </div>
+
+                    <div>
+                        <div class="flex justify-between items-end mb-0.5">
+                            <label for="slDw" class="text-[11px] font-bold text-cae-text uppercase">Niple Ressalto Ødw (µ)</label>
+                            <span id="valDw" class="font-mono text-cae-amber text-xs font-bold">22.40 mm (σ 0.05)</span>
+                        </div>
+                        <div class="hmi-slider-container">
+                            <div class="slider-fill" id="fillDw" style="width: 28%;"></div>
+                            <input type="range" id="slDw" min="21.0" max="28.0" step="0.05" value="22.40">
+                        </div>
+                    </div>
+
+                    <div>
+                        <div class="flex justify-between items-end mb-0.5">
+                            <label for="slTolDw" class="text-[11px] font-bold text-cae-text uppercase">Abertura LSE de Ødw</label>
+                            <span id="valTolDw" class="font-mono text-cae-amber text-xs font-bold">22.39 mm (Antigo)</span>
+                        </div>
+                        <div class="hmi-slider-container">
+                            <div class="slider-fill" id="fillTolDw" style="width: 15%;"></div>
+                            <input type="range" id="slTolDw" min="22.15" max="27.60" step="0.01" value="22.39">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- LINHA DE GRÁFICOS (HISTOGRAMA MONTE CARLO + CAPABILIDADE CPK) -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3.5 flex-1">
+                <div class="glass-panel p-4 flex flex-col min-h-[270px]">
+                    <div class="flex items-center justify-between mb-2">
+                        <div>
+                            <h2 class="text-xs font-bold text-cae-text uppercase tracking-wider">Distribuição Monte Carlo (Ødw vs. LSE)</h2>
+                            <p id="mcSubtitle" class="text-[11px] text-cae-muted">3.000 amostras normais • auditoria de limite superior</p>
+                        </div>
+                    </div>
+                    <div class="relative flex-1 w-full min-h-[200px]">
+                        <canvas id="mcHistChart"></canvas>
+                    </div>
+                </div>
+
+                <div class="glass-panel p-4 flex flex-col min-h-[270px]">
+                    <div class="flex items-center justify-between mb-2">
+                        <div>
+                            <h2 class="text-xs font-bold text-cae-text uppercase tracking-wider">Comparativo Cpk (Atual vs. Proposta)</h2>
+                            <p class="text-[11px] text-cae-muted">Meta industrial Cpk ≥ 1,33 • impacto da revisão</p>
+                        </div>
+                    </div>
+                    <div class="relative flex-1 w-full min-h-[200px]">
+                        <canvas id="cpkBarChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <script>
+        (function() {
+            const htmlEl = document.documentElement;
+            const themeToggle = document.getElementById('themeToggle');
+            const sunIcon = document.getElementById('sunIcon');
+            const moonIcon = document.getElementById('moonIcon');
+            const themeText = document.getElementById('themeText');
+
+            function getThemeColors() {
+                const s = getComputedStyle(htmlEl);
+                return {
+                    text: s.getPropertyValue('--cae-text').trim(),
+                    muted: s.getPropertyValue('--cae-muted').trim(),
+                    teal: s.getPropertyValue('--cae-teal').trim(),
+                    amber: s.getPropertyValue('--cae-amber').trim(),
+                    danger: s.getPropertyValue('--cae-danger').trim(),
+                    grid: s.getPropertyValue('--cae-grid').trim(),
+                    surface: s.getPropertyValue('--cae-surface').trim()
+                };
+            }
+
+            function syncThemeUi() {
+                const t = htmlEl.getAttribute('data-theme') || 'dark';
+                if (t === 'light') {
+                    sunIcon.classList.remove('hidden');
+                    moonIcon.classList.add('hidden');
+                    themeText.textContent = 'Claro';
+                } else {
+                    sunIcon.classList.add('hidden');
+                    moonIcon.classList.remove('hidden');
+                    themeText.textContent = 'Escuro';
+                }
+            }
+
+            // Inputs & Presets
+            const slDi = document.getElementById('slDi');
+            const slP = document.getElementById('slP');
+            const slDw = document.getElementById('slDw');
+            const slTolDw = document.getElementById('slTolDw');
+
+            const valDi = document.getElementById('valDi');
+            const valP = document.getElementById('valP');
+            const valDw = document.getElementById('valDw');
+            const valTolDw = document.getElementById('valTolDw');
+
+            const fillDi = document.getElementById('fillDi');
+            const fillP = document.getElementById('fillP');
+            const fillDw = document.getElementById('fillDw');
+            const fillTolDw = document.getElementById('fillTolDw');
+
+            const presetProposalOld = document.getElementById('presetProposalOld');
+            const presetProposalRev = document.getElementById('presetProposalRev');
+            const presetDwg24 = document.getElementById('presetDwg24');
+            const runMcBtn = document.getElementById('runMcBtn');
+
+            const kpiDmin = document.getElementById('kpiDmin');
+            const kpiDmax = document.getElementById('kpiDmax');
+            const kpiCpkDw = document.getElementById('kpiCpkDw');
+            const kpiYield = document.getElementById('kpiYield');
+            const fitStatusBadge = document.getElementById('fitStatusBadge');
+
+            const int1 = document.getElementById('int1');
+            const int2 = document.getElementById('int2');
+            const int3 = document.getElementById('int3');
+            const int4 = document.getElementById('int4');
+            const interfNominalNote = document.getElementById('interfNominalNote');
+
+            const svgLblDmin = document.getElementById('svgLblDmin');
+            const svgLblDmax = document.getElementById('svgLblDmax');
+            const svgLblDs = document.getElementById('svgLblDs');
+            const svgLblDw = document.getElementById('svgLblDw');
+            const svgLblHose = document.getElementById('svgLblHose');
+
+            let currentDs = 20.0;
+            let sigmaDi = 0.10;
+            let sigmaP = 0.10;
+            let sigmaDs = 0.05;
+            let sigmaDw = 0.05;
+            let currentTolMode = 'old';
+
+            function randn() {
+                let u = 0, v = 0;
+                while (u === 0) u = Math.random();
+                while (v === 0) v = Math.random();
+                return Math.sqrt(-2.0 * Math.log(u)) * Math.cos(2.0 * Math.PI * v);
+            }
+
+            function updateSliderFill(inp, fill) {
+                const pct = ((parseFloat(inp.value) - parseFloat(inp.min)) / (parseFloat(inp.max) - parseFloat(inp.min))) * 100;
+                fill.style.width = `${Math.max(0, Math.min(100, pct))}%`;
+            }
+
+            let mcChart = null;
+            let cpkChart = null;
+
+            function simulateAndRender() {
+                const di = parseFloat(slDi.value);
+                const p = parseFloat(slP.value);
+                const dw = parseFloat(slDw.value);
+                const lseDw = parseFloat(slTolDw.value);
+                const lieDw = currentTolMode === 'dwg24' ? dw - 0.15 : (currentTolMode === 'rev' ? dw - 0.25 : 21.80);
+
+                updateSliderFill(slDi, fillDi);
+                updateSliderFill(slP, fillP);
+                updateSliderFill(slDw, fillDw);
+                updateSliderFill(slTolDw, fillTolDw);
+
+                valDi.textContent = `${di.toFixed(2)} mm (σ ${sigmaDi.toFixed(2)})`;
+                valP.textContent = `${p.toFixed(2)} mm (σ ${sigmaP.toFixed(2)})`;
+                valDw.textContent = `${dw.toFixed(2)} mm (σ ${sigmaDw.toFixed(2)})`;
+                valTolDw.textContent = `${lseDw.toFixed(2)} mm (${currentTolMode === 'old' ? 'Antigo' : currentTolMode === 'rev' ? 'Revisado' : 'DWG ±0.15'})`;
+
+                // Interference matrix (3*sigma or tolerance band)
+                const tolDi = currentTolMode === 'dwg24' ? 0.40 : 3 * sigmaDi;
+                const tolDs = currentTolMode === 'dwg24' ? 0.15 : 3 * sigmaDs;
+                const i1 = (di - tolDi) - (currentDs + tolDs);
+                const i2 = (di - tolDi) - (currentDs - tolDs);
+                const i3 = (di + tolDi) - (currentDs + tolDs);
+                const i4 = (di + tolDi) - (currentDs - tolDs);
+                int1.textContent = `${i1.toFixed(2)} mm`;
+                int2.textContent = `${i2.toFixed(2)} mm`;
+                int3.textContent = `${i3.toFixed(2)} mm`;
+                int4.textContent = `${i4.toFixed(2)} mm`;
+                interfNominalNote.textContent = currentTolMode === 'dwg24'
+                    ? 'Envelope DWG (24±0.4 × 25±0.15)'
+                    : `Faixa ±3σ (${di.toFixed(2)} × ${currentDs.toFixed(2)})`;
+
+                if (i4 < 0) {
+                    fitStatusBadge.textContent = 'Interferência Positiva Segura';
+                    fitStatusBadge.className = 'px-2.5 py-0.5 rounded-full text-[11px] font-mono font-bold bg-emerald-500/15 text-cae-teal border border-cae-teal/30';
+                } else {
+                    fitStatusBadge.textContent = 'Risco de Folga na Montagem';
+                    fitStatusBadge.className = 'px-2.5 py-0.5 rounded-full text-[11px] font-mono font-bold bg-amber-500/15 text-cae-amber border border-cae-amber/30';
+                }
+
+                // Monte Carlo N = 3000 (Volume conservation / wall-thinning DIN 3021 model)
+                const N = 3000;
+                const samplesDw = [];
+                let sumDmin = 0, sumDmax = 0, okCount = 0;
+
+                for (let k = 0; k < N; k++) {
+                    const sDi = di + sigmaDi * randn();
+                    const sP = p + sigmaP * randn();
+                    const sDs = currentDs + sigmaDs * randn();
+                    const sDw = dw + sigmaDw * randn();
+
+                    const areaTerm = Math.pow(sDi + 2 * sP, 2) - Math.pow(sDi, 2);
+                    const dMinVal = Math.sqrt(Math.max(1, Math.pow(sDs, 2) + areaTerm));
+                    const dMaxVal = Math.sqrt(Math.max(1, Math.pow(sDw, 2) + areaTerm));
+
+                    sumDmin += dMinVal;
+                    sumDmax += dMaxVal;
+                    samplesDw.push(sDw);
+                    if (sDw >= lieDw && sDw <= lseDw) okCount++;
+                }
+
+                const meanDmin = sumDmin / N;
+                const meanDmax = sumDmax / N;
+                const cpkUpper = (lseDw - dw) / (3 * sigmaDw);
+                const cpkLower = (dw - lieDw) / (3 * sigmaDw);
+                const cpkDw = Math.min(cpkUpper, cpkLower);
+                const yieldPct = (okCount / N) * 100;
+
+                kpiDmin.textContent = `${meanDmin.toFixed(2)} mm`;
+                kpiDmax.textContent = `${meanDmax.toFixed(2)} mm`;
+                kpiCpkDw.textContent = cpkDw.toFixed(2);
+                kpiYield.textContent = `${yieldPct.toFixed(1)}%`;
+
+                if (cpkDw < 1.0) {
+                    kpiCpkDw.className = 'text-lg font-mono font-extrabold text-red-400';
+                } else if (cpkDw < 1.33) {
+                    kpiCpkDw.className = 'text-lg font-mono font-extrabold text-cae-amber';
+                } else {
+                    kpiCpkDw.className = 'text-lg font-mono font-extrabold text-cae-teal';
+                }
+
+                // Update SVG Labels
+                svgLblDmin.textContent = `Dmin ${meanDmin.toFixed(2)}`;
+                svgLblDmax.textContent = `Dmax ${meanDmax.toFixed(2)}`;
+                svgLblDs.textContent = `Øds ${currentDs.toFixed(2)}`;
+                svgLblDw.textContent = `Ødw ${dw.toFixed(2)}`;
+                svgLblHose.textContent = `p ${p.toFixed(2)}`;
+
+                // Build Histogram Bins for Ødw around [dw - 4*sigma, max(dw + 4*sigma, lseDw + 0.08)]
+                const minBin = Math.min(dw - 4 * sigmaDw, lieDw - 0.04);
+                const maxBin = Math.max(dw + 4 * sigmaDw, lseDw + 0.04);
+                const numBins = 24;
+                const binW = (maxBin - minBin) / numBins;
+                const binLabels = [];
+                const binInside = new Array(numBins).fill(0);
+                const binOutside = new Array(numBins).fill(0);
+
+                for (let b = 0; b < numBins; b++) {
+                    binLabels.push((minBin + (b + 0.5) * binW).toFixed(2));
+                }
+
+                samplesDw.forEach((v) => {
+                    let idx = Math.floor((v - minBin) / binW);
+                    if (idx < 0) idx = 0;
+                    if (idx >= numBins) idx = numBins - 1;
+                    if (v <= lseDw && v >= lieDw) binInside[idx]++;
+                    else binOutside[idx]++;
+                });
+
+                const c = getThemeColors();
+                if (mcChart) {
+                    mcChart.data.labels = binLabels;
+                    mcChart.data.datasets[0].data = binInside;
+                    mcChart.data.datasets[0].backgroundColor = c.teal;
+                    mcChart.data.datasets[1].data = binOutside;
+                    mcChart.data.datasets[1].backgroundColor = c.danger;
+                    mcChart.options.scales.x.ticks.color = c.muted;
+                    mcChart.options.scales.x.grid.color = c.grid;
+                    mcChart.options.scales.y.ticks.color = c.muted;
+                    mcChart.options.scales.y.grid.color = c.grid;
+                    mcChart.options.plugins.legend.labels.color = c.text;
+                    mcChart.update('none');
+                }
+
+                // Update Cpk Comparison Chart (Proposal bar updates live for Ødw!)
+                if (cpkChart) {
+                    const livePropData = [
+                        currentTolMode === 'rev' ? 1.50 : 0.84,
+                        1.34,
+                        2.19,
+                        Number(cpkDw.toFixed(2)),
+                        1.85,
+                        1.56
+                    ];
+                    cpkChart.data.datasets[1].data = livePropData;
+                    cpkChart.data.datasets[0].backgroundColor = c.muted;
+                    cpkChart.data.datasets[1].backgroundColor = livePropData.map(v => v < 1.0 ? c.danger : (v < 1.33 ? c.amber : c.teal));
+                    cpkChart.options.scales.x.ticks.color = c.muted;
+                    cpkChart.options.scales.y.ticks.color = c.muted;
+                    cpkChart.options.scales.y.grid.color = c.grid;
+                    cpkChart.options.plugins.legend.labels.color = c.text;
+                    cpkChart.update('none');
+                }
+            }
+
+            function initCharts() {
+                const c = getThemeColors();
+                mcChart = new Chart(document.getElementById('mcHistChart').getContext('2d'), {
+                    type: 'bar',
+                    data: {
+                        labels: [],
+                        datasets: [
+                            { label: 'Dentro LIE/LSE', data: [], backgroundColor: c.teal, borderRadius: 3 },
+                            { label: 'Fora LSE (Reprovação)', data: [], backgroundColor: c.danger, borderRadius: 3 }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            x: { stacked: true, ticks: { color: c.muted, maxTicksLimit: 7, font: { family: 'JetBrains Mono', size: 10 } }, grid: { color: c.grid } },
+                            y: { stacked: true, ticks: { color: c.muted, font: { family: 'JetBrains Mono', size: 10 } }, grid: { color: c.grid } }
+                        },
+                        plugins: {
+                            legend: { position: 'bottom', labels: { color: c.text, boxWidth: 10, font: { size: 10 } } }
+                        }
+                    }
+                });
+
+                cpkChart = new Chart(document.getElementById('cpkBarChart').getContext('2d'), {
+                    type: 'bar',
+                    data: {
+                        labels: ['Hose di', 'Hose p', 'Nipple Øds', 'Nipple Ødw', 'Conj. Dmin', 'Conj. Dmax'],
+                        datasets: [
+                            { label: 'DWG Atual', data: [1.40, 1.28, 1.38, 1.15, 1.65, 1.54], backgroundColor: c.muted, borderRadius: 4 },
+                            { label: 'Proposta (Live)', data: [0.84, 1.34, 2.19, -0.07, 1.85, 1.56], backgroundColor: c.teal, borderRadius: 4 }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            x: { ticks: { color: c.muted, font: { family: 'JetBrains Mono', size: 10 } }, grid: { display: false } },
+                            y: { min: -0.5, suggestedMax: 2.5, ticks: { color: c.muted, font: { family: 'JetBrains Mono', size: 10 } }, grid: { color: c.grid } }
+                        },
+                        plugins: {
+                            legend: { position: 'bottom', labels: { color: c.text, boxWidth: 10, font: { size: 10 } } }
+                        }
+                    }
+                });
+            }
+
+            function setActivePreset(btn, mode) {
+                [presetProposalOld, presetProposalRev, presetDwg24].forEach(b => {
+                    b.classList.remove('active');
+                    b.classList.add('text-cae-muted');
+                });
+                btn.classList.add('active');
+                btn.classList.remove('text-cae-muted');
+                currentTolMode = mode;
+
+                if (mode === 'old') {
+                    currentDs = 20.0; sigmaDi = 0.10; sigmaP = 0.10; sigmaDs = 0.05; sigmaDw = 0.05;
+                    slDi.value = '19.25'; slP.value = '3.50'; slDw.value = '22.40'; slTolDw.value = '22.39';
+                } else if (mode === 'rev') {
+                    currentDs = 20.0; sigmaDi = 0.10; sigmaP = 0.10; sigmaDs = 0.05; sigmaDw = 0.05;
+                    slDi.value = '19.25'; slP.value = '3.50'; slDw.value = '22.40'; slTolDw.value = '22.65';
+                } else {
+                    currentDs = 25.0; sigmaDi = 0.133; sigmaP = 0.133; sigmaDs = 0.05; sigmaDw = 0.05;
+                    slDi.value = '24.00'; slP.value = '3.50'; slDw.value = '27.00'; slTolDw.value = '27.25';
+                }
+                simulateAndRender();
+            }
+
+            [slDi, slP, slDw, slTolDw].forEach(inp => inp.addEventListener('input', simulateAndRender));
+            presetProposalOld.addEventListener('click', () => setActivePreset(presetProposalOld, 'old'));
+            presetProposalRev.addEventListener('click', () => setActivePreset(presetProposalRev, 'rev'));
+            presetDwg24.addEventListener('click', () => setActivePreset(presetDwg24, 'dwg24'));
+            runMcBtn.addEventListener('click', simulateAndRender);
+
+            themeToggle.addEventListener('click', () => {
+                const next = htmlEl.getAttribute('data-theme') === 'light' ? 'dark' : 'light';
+                htmlEl.setAttribute('data-theme', next);
+                localStorage.setItem('rv_theme', next);
+                syncThemeUi();
+                simulateAndRender();
+            });
+
+            syncThemeUi();
+            initCharts();
+            simulateAndRender();
+        })();
+    </script>
+</body>
+</html>

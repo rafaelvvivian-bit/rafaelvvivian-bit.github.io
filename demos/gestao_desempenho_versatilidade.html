@@ -1,0 +1,1114 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestão de Desempenho, Matriz de Versatilidade &amp; Matriz 9-Box | People Analytics Industrial</title>
+    <script>
+        (function() {
+            const savedTheme = localStorage.getItem('rv_theme') || 'dark';
+            document.documentElement.setAttribute('data-theme', savedTheme);
+        })();
+    </script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'system-ui', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    },
+                    colors: {
+                        cae: {
+                            bg: 'var(--cae-bg)',
+                            surface: 'var(--cae-surface)',
+                            text: 'var(--cae-text)',
+                            muted: 'var(--cae-muted)',
+                            teal: 'var(--cae-teal)',
+                            amber: 'var(--cae-amber)',
+                            danger: 'var(--cae-danger)',
+                            border: 'var(--cae-border)'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        /* Paleta 2: CAE / von Mises Spectrum */
+        :root, [data-theme="dark"] {
+            --cae-bg: #090E17;
+            --cae-surface: #131E31;
+            --cae-panel-bg: rgba(19, 30, 49, 0.90);
+            --cae-text: #F8FAFC;
+            --cae-muted: #94A3B8;
+            --cae-primary: #14B8A6;
+            --cae-teal: #2DD4BF;
+            --cae-amber: #F59E0B;
+            --cae-danger: #EF4444;
+            --cae-border: rgba(148, 163, 184, 0.16);
+            --cae-grid: rgba(148, 163, 184, 0.12);
+            --cae-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.72);
+        }
+
+        [data-theme="light"] {
+            --cae-bg: #F6F7F9;
+            --cae-surface: #FFFFFF;
+            --cae-panel-bg: rgba(255, 255, 255, 0.92);
+            --cae-text: #0F172A;
+            --cae-muted: #64748B;
+            --cae-primary: #0F3D5E;
+            --cae-teal: #0D9488;
+            --cae-amber: #D97706;
+            --cae-danger: #DC2626;
+            --cae-border: rgba(15, 23, 42, 0.12);
+            --cae-grid: rgba(15, 23, 42, 0.08);
+            --cae-shadow: 0 10px 30px -10px rgba(15, 23, 42, 0.12);
+        }
+
+        body {
+            background-color: var(--cae-bg);
+            color: var(--cae-text);
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
+
+        .glass-panel {
+            background: var(--cae-panel-bg);
+            backdrop-filter: blur(12px);
+            border: 1px solid var(--cae-border);
+            border-radius: 14px;
+            box-shadow: var(--cae-shadow);
+        }
+
+        /* Sliders HMI */
+        .hmi-slider-container {
+            position: relative;
+            height: 24px;
+            display: flex;
+            align-items: center;
+        }
+
+        .slider-fill {
+            position: absolute;
+            left: 0;
+            height: 6px;
+            border-radius: 9999px;
+            background: linear-gradient(90deg, #14B8A6, #F59E0B);
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        input[type="range"] {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 100%;
+            height: 6px;
+            background: var(--cae-border);
+            border-radius: 9999px;
+            outline: none;
+            position: relative;
+            z-index: 2;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: #2DD4BF;
+            cursor: pointer;
+            border: 2px solid #FFFFFF;
+            box-shadow: 0 0 10px rgba(45, 212, 191, 0.6);
+            transition: transform 0.15s ease, background-color 0.15s ease;
+        }
+
+        input[type="range"]::-webkit-slider-thumb:hover {
+            transform: scale(1.15);
+            background: #14B8A6;
+        }
+
+        /* Abas ativas */
+        .tab-btn.active {
+            background-color: var(--cae-surface);
+            border-color: var(--cae-teal);
+            color: var(--cae-teal);
+            font-weight: 700;
+        }
+
+        /* Níveis da Matriz de Versatilidade */
+        .lvl-1 { background-color: rgba(239, 68, 68, 0.85); color: #FFFFFF; } /* Treinamento */
+        .lvl-2 { background-color: rgba(245, 158, 11, 0.85); color: #000000; } /* Acompanhado */
+        .lvl-3 { background-color: rgba(16, 185, 129, 0.85); color: #FFFFFF; } /* Autônomo */
+        .lvl-4 { background-color: rgba(59, 130, 246, 0.85); color: #FFFFFF; } /* Multiplicador */
+        .lvl-0 { background-color: rgba(148, 163, 184, 0.25); color: var(--cae-muted); } /* N/A */
+
+        /* Pulsar do ponto da Persona */
+        @keyframes pulsePersona {
+            0% { transform: scale(1); opacity: 1; filter: drop-shadow(0 0 4px #2DD4BF); }
+            50% { transform: scale(1.12); opacity: 0.85; filter: drop-shadow(0 0 12px #2DD4BF); }
+            100% { transform: scale(1); opacity: 1; filter: drop-shadow(0 0 4px #2DD4BF); }
+        }
+        .persona-pulse {
+            animation: pulsePersona 2s infinite ease-in-out;
+        }
+    </style>
+</head>
+<body class="min-h-screen p-3 md:p-5 flex flex-col font-sans">
+
+    <!-- HEADER & NAVEGAÇÃO -->
+    <header class="glass-panel px-5 py-3 mb-4 flex flex-wrap justify-between items-center gap-3">
+        <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-lg bg-cae-surface border border-cae-border flex items-center justify-center shadow-lg relative overflow-hidden">
+                <div class="absolute inset-0 bg-cae-teal/20"></div>
+                <svg class="w-5 h-5 text-cae-teal relative z-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
+                </svg>
+            </div>
+            <div>
+                <h1 class="text-base md:text-lg font-extrabold tracking-tight text-cae-text">
+                    PEOPLE ANALYTICS: <span class="text-cae-teal">VERSATILIDADE &amp; DESEMPENHO INDUSTRIAL</span>
+                </h1>
+                <p class="text-[11px] font-mono text-cae-muted uppercase tracking-wider">
+                    Matriz de Habilidades • Matriz 9-Box (Técnico × Comportamental) • Simulador de Persona
+                </p>
+            </div>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-2">
+            <!-- SELETOR DE MÓDULOS -->
+            <div class="flex bg-cae-bg border border-cae-border rounded-lg p-1 text-xs font-mono">
+                <button type="button" id="tabMod1" class="tab-btn active px-3 py-1.5 rounded border border-transparent transition">
+                    1. Matriz de Versatilidade
+                </button>
+                <button type="button" id="tabMod2" class="tab-btn px-3 py-1.5 rounded border border-transparent text-cae-muted hover:text-cae-text transition">
+                    2. Matriz 9-Box &amp; Persona
+                </button>
+                <button type="button" id="tabMod3" class="tab-btn px-3 py-1.5 rounded border border-transparent text-cae-muted hover:text-cae-text transition">
+                    3. Gaps (Pareto) &amp; Feedback
+                </button>
+            </div>
+
+            <a href="../index.html#cases" class="px-3 py-1.5 rounded-full bg-cae-surface border border-cae-border text-xs font-mono font-bold text-cae-muted hover:text-cae-teal hover:border-cae-teal transition">
+                &larr; Portfólio
+            </a>
+            <button id="themeToggle" type="button" aria-label="Alternar tema Claro e Escuro" class="flex items-center gap-2 px-3 py-1.5 rounded-full bg-cae-surface border border-cae-border text-xs font-mono font-bold text-cae-text hover:border-cae-teal transition">
+                <svg id="sunIcon" class="w-4 h-4 hidden text-cae-amber" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="5" stroke-width="2"/><line x1="12" y1="1" x2="12" y2="3" stroke-width="2"/><line x1="12" y1="21" x2="12" y2="23" stroke-width="2"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64" stroke-width="2"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78" stroke-width="2"/><line x1="1" y1="12" x2="3" y2="12" stroke-width="2"/><line x1="21" y1="12" x2="23" y2="12" stroke-width="2"/></svg>
+                <svg id="moonIcon" class="w-4 h-4 text-cae-teal" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg>
+                <span id="themeText">Tema</span>
+            </button>
+        </div>
+    </header>
+
+    <!-- KPIS TÉCNICOS NO TOPO -->
+    <section class="grid grid-cols-2 md:grid-cols-4 gap-3.5 mb-4">
+        <div class="glass-panel p-3.5 flex flex-col justify-between">
+            <span class="text-[10px] font-mono text-cae-muted uppercase font-bold">Atingimento Técnico (Desenvolvimento)</span>
+            <div class="mt-1">
+                <div class="flex items-baseline gap-1.5">
+                    <span class="text-2xl font-mono font-extrabold text-cae-teal">84,5%</span>
+                    <span class="text-xs font-mono text-cae-muted">operações</span>
+                </div>
+                <span class="text-[11px] font-mono text-cae-teal font-bold">17 Colaboradores • 23 Atividades</span>
+            </div>
+        </div>
+
+        <div class="glass-panel p-3.5 flex flex-col justify-between">
+            <span class="text-[10px] font-mono text-cae-muted uppercase font-bold">Atingimento Técnico (Apoio)</span>
+            <div class="mt-1">
+                <div class="flex items-baseline gap-1.5">
+                    <span class="text-2xl font-mono font-extrabold text-cae-amber">60,0%</span>
+                    <span class="text-xs font-mono text-cae-muted">operações</span>
+                </div>
+                <span class="text-[11px] font-mono text-cae-amber font-bold">10 Colaboradores • 15 Atividades</span>
+            </div>
+        </div>
+
+        <div class="glass-panel p-3.5 flex flex-col justify-between">
+            <span class="text-[10px] font-mono text-cae-muted uppercase font-bold">Critério de Avaliação</span>
+            <div class="mt-1">
+                <div class="flex items-baseline gap-1.5">
+                    <span class="text-2xl font-mono font-extrabold text-cae-text">1 a 4</span>
+                    <span class="text-xs font-mono text-cae-muted">níveis</span>
+                </div>
+                <span class="text-[11px] font-mono text-cae-muted font-bold">1: Treinamento → 4: Multiplicador</span>
+            </div>
+        </div>
+
+        <div class="glass-panel p-3.5 flex flex-col justify-between">
+            <span class="text-[10px] font-mono text-cae-muted uppercase font-bold">Ciclos de Feedback &amp; PDI</span>
+            <div class="mt-1">
+                <div class="flex items-baseline gap-1.5">
+                    <span class="text-2xl font-mono font-extrabold text-cae-teal">45d / 90d</span>
+                    <span class="text-xs font-mono text-cae-muted">e Anual</span>
+                </div>
+                <span class="text-[11px] font-mono text-cae-teal font-bold">Imparcialidade &amp; Foco em Entregas</span>
+            </div>
+        </div>
+    </section>
+
+    <!-- =========================================================================
+         MÓDULO 1: MATRIZ DE VERSATILIDADE TÉCNICA (HARD SKILLS)
+         ========================================================================= -->
+    <div id="viewMod1" class="flex-1 flex flex-col gap-4">
+        <div class="glass-panel p-4 flex flex-col justify-between">
+            <div class="flex flex-wrap justify-between items-center mb-3 pb-2 border-b border-cae-border gap-2">
+                <div>
+                    <span class="text-[10px] font-mono text-cae-amber uppercase font-bold">Qualificação Técnica por Posto de Trabalho</span>
+                    <h2 class="text-sm font-bold text-cae-text">Matriz de Versatilidade &amp; Habilidades da Ferramentaria</h2>
+                </div>
+                <div class="flex items-center gap-2">
+                    <!-- Switch Setor Apoio vs Desenvolvimento -->
+                    <div class="flex bg-cae-bg border border-cae-border rounded-lg p-0.5 text-xs font-mono">
+                        <button type="button" id="btnSectorDev" class="px-2.5 py-1 rounded bg-cae-teal text-cae-bg font-extrabold shadow-sm transition">
+                            Setor Desenvolvimento (17 Colab. • 84,5%)
+                        </button>
+                        <button type="button" id="btnSectorApoio" class="px-2.5 py-1 rounded text-cae-muted hover:text-cae-text font-bold transition">
+                            Setor Apoio (10 Colab. • 60,0%)
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- LEGENDA DOS 4 NÍVEIS OFICIAIS -->
+            <div class="grid grid-cols-2 md:grid-cols-5 gap-2 mb-3 text-[11px] font-mono">
+                <div class="flex items-center gap-2 p-1.5 rounded bg-cae-bg border border-cae-border">
+                    <span class="w-4 h-4 rounded flex items-center justify-center font-bold lvl-1 text-[10px]">1</span>
+                    <span class="text-cae-muted">Necessita Treinamento</span>
+                </div>
+                <div class="flex items-center gap-2 p-1.5 rounded bg-cae-bg border border-cae-border">
+                    <span class="w-4 h-4 rounded flex items-center justify-center font-bold lvl-2 text-[10px]">2</span>
+                    <span class="text-cae-muted">Com Acompanhamento</span>
+                </div>
+                <div class="flex items-center gap-2 p-1.5 rounded bg-cae-bg border border-cae-border">
+                    <span class="w-4 h-4 rounded flex items-center justify-center font-bold lvl-3 text-[10px]">3</span>
+                    <span class="text-cae-muted">Treinado / Autônomo</span>
+                </div>
+                <div class="flex items-center gap-2 p-1.5 rounded bg-cae-bg border border-cae-border">
+                    <span class="w-4 h-4 rounded flex items-center justify-center font-bold lvl-4 text-[10px]">4</span>
+                    <span class="text-cae-teal font-bold">Multiplicador / Instrutor</span>
+                </div>
+                <div class="flex items-center gap-2 p-1.5 rounded bg-cae-bg border border-cae-border">
+                    <span class="w-4 h-4 rounded flex items-center justify-center font-bold lvl-0 text-[10px]">0</span>
+                    <span class="text-cae-muted">Não Aplicável</span>
+                </div>
+            </div>
+
+            <!-- TABELA COM SCROLL HORIZONTAL DA MATRIZ -->
+            <div class="overflow-x-auto rounded-xl border border-cae-border bg-cae-bg/80 max-h-[460px]">
+                <table id="tableVersatilidade" class="w-full text-left border-collapse text-xs font-mono">
+                    <!-- Inserido dinamicamente via JS -->
+                </table>
+            </div>
+
+            <div class="mt-3 p-2.5 bg-cae-bg/90 rounded-xl border border-cae-border flex flex-wrap justify-between items-center text-[11px] font-mono gap-2">
+                <span class="text-cae-muted">
+                    Regra Operacional: <strong class="text-cae-teal">Níveis 3 e 4</strong> contam como operação executada com autonomia. Validade: 4 meses.
+                </span>
+                <span class="text-cae-amber font-bold">
+                    Sigilo: Nomes reais substituídos por identificadores anonimizados (COL-01 a COL-27).
+                </span>
+            </div>
+        </div>
+    </div>
+
+    <!-- =========================================================================
+         MÓDULO 2: MATRIZ 9-BOX & SIMULADOR DE PERSONA EM TEMPO REAL
+         ========================================================================= -->
+    <div id="viewMod2" class="hidden flex-1 flex flex-col gap-4">
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-4 flex-1">
+
+            <!-- LADO ESQUERDO: GRÁFICO 2D DISPERSÃO & HEATMAP DE COMPETÊNCIAS -->
+            <div class="lg:col-span-7 glass-panel p-4 flex flex-col justify-between">
+                <div>
+                    <div class="flex flex-wrap justify-between items-center mb-2 pb-2 border-b border-cae-border gap-2">
+                        <div>
+                            <span class="text-[10px] font-mono text-cae-teal uppercase font-bold">Mapeamento 2D de Competências</span>
+                            <h2 class="text-sm font-bold text-cae-text">Matriz 9-Box: Técnico (%) × Comportamental (%)</h2>
+                        </div>
+                        <span id="badgePersonaStatus" class="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-cae-teal/20 text-cae-teal border border-cae-teal/40">
+                            Persona FN: Especialista Técnico (55% Comp • 85% Téc)
+                        </span>
+                    </div>
+
+                    <!-- CONTAINER DO GRÁFICO CHART.JS -->
+                    <div class="relative w-full h-[320px]">
+                        <canvas id="chartScatter9Box"></canvas>
+                    </div>
+                </div>
+
+                <!-- LEGENDA DOS QUADRANTES DA MATRIZ 9-BOX -->
+                <div class="mt-3 grid grid-cols-3 gap-2 text-[10px] font-mono pt-2 border-t border-cae-border">
+                    <div class="p-1.5 rounded bg-cae-bg border border-cae-border">
+                        <span class="text-cae-amber font-bold block">Especialista Técnico</span>
+                        <span class="text-cae-muted text-[9px]">Téc &gt;70% • Comp &lt;60%</span>
+                    </div>
+                    <div class="p-1.5 rounded bg-cae-bg border border-cae-teal/30">
+                        <span class="text-cae-teal font-bold block">Alto Desempenho / Ref.</span>
+                        <span class="text-cae-muted text-[9px]">Téc &gt;70% • Comp &gt;70%</span>
+                    </div>
+                    <div class="p-1.5 rounded bg-cae-bg border border-cae-border">
+                        <span class="text-sky-400 font-bold block">Líder / Articulador</span>
+                        <span class="text-cae-muted text-[9px]">Comp &gt;75% • Téc 50-70%</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- LADO DIREITO: SIMULADOR DE PERSONA EM TEMPO REAL -->
+            <div class="lg:col-span-5 glass-panel p-4 flex flex-col justify-between">
+                <div>
+                    <div class="flex justify-between items-center mb-2 pb-2 border-b border-cae-border">
+                        <div>
+                            <span class="text-[10px] font-mono text-cae-amber uppercase font-bold">Simulação &amp; PDI</span>
+                            <h3 class="text-sm font-bold text-cae-text">Criador de Persona em Tempo Real</h3>
+                        </div>
+                        <span class="text-[10px] font-mono text-cae-muted">Impacto Imediato no Gráfico</span>
+                    </div>
+
+                    <!-- PRESETS DE PERSONA RÁPIDOS -->
+                    <div class="mb-3">
+                        <label class="text-[10px] font-mono text-cae-muted uppercase block mb-1 font-bold">Presets Rápidos de Avaliação:</label>
+                        <div class="grid grid-cols-2 gap-1.5 text-[11px] font-mono">
+                            <button type="button" id="btnPreset1" class="px-2 py-1 rounded bg-cae-bg border border-cae-border hover:border-cae-teal text-cae-text text-left transition truncate">
+                                ⚙️ Persona FN (Histórico Real)
+                            </button>
+                            <button type="button" id="btnPreset2" class="px-2 py-1 rounded bg-cae-bg border border-cae-border hover:border-cae-teal text-cae-text text-left transition truncate">
+                                ⭐ Multiplicador Referência
+                            </button>
+                            <button type="button" id="btnPreset3" class="px-2 py-1 rounded bg-cae-bg border border-cae-border hover:border-cae-teal text-cae-text text-left transition truncate">
+                                🔧 Foco Técnico (Gap 5S)
+                            </button>
+                            <button type="button" id="btnPreset4" class="px-2 py-1 rounded bg-cae-bg border border-cae-border hover:border-cae-teal text-cae-text text-left transition truncate">
+                                🚀 Jovem com Alto Potencial
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- CONTROLES PARAMÉTRICOS DA PERSONA -->
+                    <div class="space-y-2.5 bg-cae-bg p-3 rounded-xl border border-cae-border text-xs font-mono">
+                        <div>
+                            <div class="flex justify-between text-[11px] mb-1">
+                                <span class="font-bold text-cae-text">1. Habilidades Técnicas (Usinagem/Ajuste):</span>
+                                <span id="valPersonaTec" class="text-cae-teal font-extrabold">85%</span>
+                            </div>
+                            <div class="hmi-slider-container">
+                                <div class="slider-fill" id="fillPersonaTec" style="width: 85%;"></div>
+                                <input type="range" id="slPersonaTec" min="20" max="100" step="1" value="85">
+                            </div>
+                        </div>
+
+                        <div>
+                            <div class="flex justify-between text-[11px] mb-1">
+                                <span class="font-bold text-cae-text">2. Disciplina, 5S &amp; Uso de Kanban:</span>
+                                <span id="valPersonaDisc" class="text-cae-amber font-extrabold">50%</span>
+                            </div>
+                            <div class="hmi-slider-container">
+                                <div class="slider-fill" id="fillPersonaDisc" style="width: 50%;"></div>
+                                <input type="range" id="slPersonaDisc" min="20" max="100" step="1" value="50">
+                            </div>
+                        </div>
+
+                        <div>
+                            <div class="flex justify-between text-[11px] mb-1">
+                                <span class="font-bold text-cae-text">3. Comunicação, Cooperação &amp; Conduta:</span>
+                                <span id="valPersonaComp" class="text-cae-amber font-extrabold">60%</span>
+                            </div>
+                            <div class="hmi-slider-container">
+                                <div class="slider-fill" id="fillPersonaComp" style="width: 60%;"></div>
+                                <input type="range" id="slPersonaComp" min="20" max="100" step="1" value="60">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- RESULTADO DA PERSONA & PDI AUTOMÁTICO -->
+                    <div class="mt-3 p-3 bg-cae-surface rounded-xl border border-cae-border font-mono">
+                        <div class="flex justify-between items-center mb-1.5">
+                            <span class="text-[10px] text-cae-muted uppercase font-bold">Diagnóstico &amp; Trilha PDI</span>
+                            <span id="badgeTrilha" class="px-2 py-0.5 rounded text-[10px] font-bold bg-cae-teal/20 text-cae-teal">
+                                51 a 79%: Médio Desempenho
+                            </span>
+                        </div>
+                        <div class="text-xs text-cae-text font-bold mb-1" id="lblPersonaQuadrant">
+                            Quadrante: Especialista Técnico com Gap Comportamental
+                        </div>
+                        <p class="text-[11px] text-cae-muted leading-relaxed" id="lblPersonaPDI">
+                            PDI Recomendado: Manter autonomia em centros de usinagem e ajuste, com plano focado em aderência ao quadro Kanban de usinagem, padronização de bancada 5S e reporte de diários.
+                        </p>
+                    </div>
+                </div>
+
+                <div class="mt-2 text-[10px] font-mono text-cae-muted text-right">
+                    Arraste os sliders acima para ver o ponto da Persona se mover em tempo real na Matriz.
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- =========================================================================
+         MÓDULO 3: GAPS COLETIVOS (PARETO 80/20) & FEEDBACK CONSTRUTIVO
+         ========================================================================= -->
+    <div id="viewMod3" class="hidden flex-1 flex flex-col gap-4">
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-4 flex-1">
+
+            <!-- LADO ESQUERDO: GRÁFICO DE PARETO DAS OPORTUNIDADES DE MELHORIA -->
+            <div class="lg:col-span-7 glass-panel p-4 flex flex-col justify-between">
+                <div>
+                    <div class="flex justify-between items-center mb-2 pb-2 border-b border-cae-border">
+                        <div>
+                            <span class="text-[10px] font-mono text-cae-amber uppercase font-bold">Pareto das Avaliações (Setembro/2025)</span>
+                            <h2 class="text-sm font-bold text-cae-text">Oportunidades de Melhoria da Equipe de Ferramentaria</h2>
+                        </div>
+                        <span class="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-amber-500/15 text-cae-amber border border-cae-amber/30">
+                            Foco 80/20: Disciplina &amp; 5S
+                        </span>
+                    </div>
+
+                    <div class="relative w-full h-[280px]">
+                        <canvas id="chartParetoGaps"></canvas>
+                    </div>
+                </div>
+
+                <div class="mt-3 grid grid-cols-3 gap-2 text-[10px] font-mono pt-2 border-t border-cae-border text-center">
+                    <div class="bg-cae-bg p-2 rounded-lg border border-cae-border">
+                        <span class="text-cae-danger font-bold block text-sm">54%</span>
+                        <span class="text-cae-muted">Disciplina + 5S (Maior Alavanca)</span>
+                    </div>
+                    <div class="bg-cae-bg p-2 rounded-lg border border-cae-border">
+                        <span class="text-cae-amber font-bold block text-sm">32%</span>
+                        <span class="text-cae-muted">Código de Conduta + Qualidade</span>
+                    </div>
+                    <div class="bg-cae-bg p-2 rounded-lg border border-cae-border">
+                        <span class="text-cae-teal font-bold block text-sm">14%</span>
+                        <span class="text-cae-muted">Cooperação + Pontualidade</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- LADO DIREITO: COMUNICADO REAL & METODOLOGIA DE FEEDBACK -->
+            <div class="lg:col-span-5 glass-panel p-4 flex flex-col justify-between font-mono">
+                <div>
+                    <span class="text-[10px] text-cae-teal uppercase font-bold block mb-1">Filosofia de Liderança &amp; Gestão à Vista</span>
+                    <h3 class="text-sm font-bold text-cae-text mb-3">Feedback Construtivo &amp; Foco Coletivo</h3>
+
+                    <div class="space-y-2.5 text-xs text-cae-muted leading-relaxed">
+                        <div class="p-2.5 rounded-lg bg-cae-bg border border-cae-border">
+                            <strong class="text-cae-text block mb-1">• Imparcialidade &amp; Clareza de Expectativas:</strong>
+                            A avaliação de desempenho é a leitura formal de uma entrega real (competência, resultado ou objetivo) em relação à função exercida. Nunca uma impressão subjetiva.
+                        </div>
+
+                        <div class="p-2.5 rounded-lg bg-cae-bg border border-cae-border">
+                            <strong class="text-cae-text block mb-1">• Oportunidades Coletivas vs. Crítica Individual:</strong>
+                            As melhorias apontadas não são punições, mas oportunidades para que o setor evolua junto. Gaps de 5S e Kanban foram tratados com reorganização física e treinamento de rotinas.
+                        </div>
+
+                        <div class="p-2.5 rounded-lg bg-cae-bg border border-cae-border">
+                            <strong class="text-cae-text block mb-1">• A Pirâmide de Maslow na Ferramentaria:</strong>
+                            Competências Básicas $\rightarrow$ PDI no Tempo $\rightarrow$ Competências Avançadas e Autonomia Técnica.
+                        </div>
+                    </div>
+                </div>
+
+                <div class="p-2.5 bg-cae-surface rounded-xl border border-cae-border text-[11px] mt-3">
+                    <span class="text-cae-teal font-bold block mb-0.5">Mensagem do Supervisor aos Colaboradores:</span>
+                    <em class="text-cae-muted italic block">
+                        "Cada um de vocês é peça fundamental. Juntos, podemos construir uma ferramentaria de referência — e esse processo começa com o comprometimento de cada um de nós."
+                    </em>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        (function() {
+            const htmlEl = document.documentElement;
+            const themeToggle = document.getElementById('themeToggle');
+            const sunIcon = document.getElementById('sunIcon');
+            const moonIcon = document.getElementById('moonIcon');
+            const themeText = document.getElementById('themeText');
+
+            function getThemeColors() {
+                const s = getComputedStyle(htmlEl);
+                return {
+                    text: s.getPropertyValue('--cae-text').trim(),
+                    muted: s.getPropertyValue('--cae-muted').trim(),
+                    teal: s.getPropertyValue('--cae-teal').trim(),
+                    amber: s.getPropertyValue('--cae-amber').trim(),
+                    danger: s.getPropertyValue('--cae-danger').trim(),
+                    grid: s.getPropertyValue('--cae-grid').trim(),
+                    surface: s.getPropertyValue('--cae-surface').trim(),
+                    bg: s.getPropertyValue('--cae-bg').trim()
+                };
+            }
+
+            function syncThemeUi() {
+                const t = htmlEl.getAttribute('data-theme') || 'dark';
+                if (t === 'light') {
+                    sunIcon.classList.remove('hidden');
+                    moonIcon.classList.add('hidden');
+                    themeText.textContent = 'Claro';
+                } else {
+                    sunIcon.classList.add('hidden');
+                    moonIcon.classList.remove('hidden');
+                    themeText.textContent = 'Escuro';
+                }
+            }
+
+            // NAVEGAÇÃO ENTRE MÓDULOS
+            const tabMod1 = document.getElementById('tabMod1');
+            const tabMod2 = document.getElementById('tabMod2');
+            const tabMod3 = document.getElementById('tabMod3');
+            const viewMod1 = document.getElementById('viewMod1');
+            const viewMod2 = document.getElementById('viewMod2');
+            const viewMod3 = document.getElementById('viewMod3');
+
+            function switchMod(m) {
+                [tabMod1, tabMod2, tabMod3].forEach(t => t.classList.remove('active'));
+                [viewMod1, viewMod2, viewMod3].forEach(v => v.classList.add('hidden'));
+
+                if (m === 1) {
+                    tabMod1.classList.add('active');
+                    viewMod1.classList.remove('hidden');
+                } else if (m === 2) {
+                    tabMod2.classList.add('active');
+                    viewMod2.classList.remove('hidden');
+                    if (!chartScatter) initScatterChart();
+                    else chartScatter.resize();
+                } else {
+                    tabMod3.classList.add('active');
+                    viewMod3.classList.remove('hidden');
+                    if (!chartPareto) initParetoChart();
+                    else chartPareto.resize();
+                }
+            }
+
+            tabMod1.addEventListener('click', () => switchMod(1));
+            tabMod2.addEventListener('click', () => switchMod(2));
+            tabMod3.addEventListener('click', () => switchMod(3));
+
+            /* =========================================================================
+               MÓDULO 1: DADOS E RENDERIZAÇÃO DA MATRIZ DE VERSATILIDADE
+               ========================================================================= */
+            const btnSectorDev = document.getElementById('btnSectorDev');
+            const btnSectorApoio = document.getElementById('btnSectorApoio');
+            const tableVersatilidade = document.getElementById('tableVersatilidade');
+            let currentSector = 'dev'; // 'dev' ou 'apoio'
+
+            // Atividades do Setor Desenvolvimento (23 operações)
+            const ativDev = [
+                'Apontam. sistema', 'Req. material', 'Prep. material', 'Furadeira', 'Fresa',
+                'CNC Usinagem', 'Ajuste bancada', 'EDM Penetr.', 'Torno mecânico', 'EDM a Fio',
+                'Prog. CNC', 'Trat. térmico', 'Retífica plana', 'Ret. cilíndrica', 'Relat. hora/hora',
+                'EDM Furo rápido', 'Descarte resíduos', 'Plano emergência', 'Uso de EPI',
+                'Matriz versat.', 'Lean Manuf.', 'FMEA 4ª ed', 'Alicate pneum.'
+            ];
+
+            // 17 Colaboradores do Desenvolvimento anonimizados
+            const colabDev = [
+                { id: 'COL-D01 (Sup. Ferram.)', pct: '82%', lvls: [4,4,0,4,0,3,3,2,0,0,2,0,2,0,4,0,3,3,3,4,4,4,0] },
+                { id: 'COL-D02 (Ferram. Sênior)', pct: '79%', lvls: [2,2,4,4,4,0,4,2,4,0,0,3,4,0,3,2,3,3,3,3,4,0,0] },
+                { id: 'COL-D03 (Ferram. Pleno)', pct: '83%', lvls: [0,0,3,4,4,0,4,3,3,0,0,4,4,0,3,3,3,3,3,3,3,0,3] },
+                { id: 'COL-D04 (Líder Turno)', pct: '84%', lvls: [0,0,3,4,3,0,4,4,3,3,0,4,4,4,3,3,3,3,3,3,0,0,0] },
+                { id: 'COL-D05 (Op. Centro CNC)', pct: '75%', lvls: [0,0,3,3,3,0,0,0,4,3,0,2,3,3,3,3,3,3,3,3,3,0,0] },
+                { id: 'COL-D06 (Prog. CNC/CAM)', pct: '83%', lvls: [0,0,3,4,3,4,3,3,3,4,4,3,3,3,3,4,3,3,3,3,0,0,4] },
+                { id: 'COL-D07 (Op. EDM Fio)', pct: '79%', lvls: [0,0,3,4,3,4,3,3,0,4,4,3,3,0,3,3,3,3,3,3,3,0,2] },
+                { id: 'COL-D08 (Retificador)', pct: '75%', lvls: [0,0,0,3,0,0,0,0,3,0,0,0,0,0,3,0,3,3,3,3,0,0,0] },
+                { id: 'COL-D09 (Fresador)', pct: '78%', lvls: [0,0,3,3,4,0,0,0,0,0,0,0,0,0,3,0,3,3,3,3,0,0,0] },
+                { id: 'COL-D10 (Torninho)', pct: '70%', lvls: [0,0,3,3,3,0,0,0,0,2,0,0,2,0,3,0,3,3,3,3,0,0,0] },
+                { id: 'COL-D11 (Ajustador A)', pct: '75%', lvls: [0,0,3,3,3,0,0,0,3,0,0,0,3,0,3,0,3,3,3,3,0,0,0] },
+                { id: 'COL-D12 (Ajustador B)', pct: '75%', lvls: [0,0,3,3,0,0,0,0,0,0,0,0,0,0,3,0,3,3,3,3,3,0,0] },
+                { id: 'COL-D13 (Ajustador C)', pct: '75%', lvls: [3,0,3,3,0,0,3,0,0,0,0,0,3,0,3,0,3,0,3,3,3,3,0] },
+                { id: 'COL-D14 (Aux. Ferram. 1)', pct: '71%', lvls: [0,0,0,3,0,0,0,0,2,0,0,0,0,0,3,0,3,3,3,3,0,0,0] },
+                { id: 'COL-D15 (Aux. Ferram. 2)', pct: '71%', lvls: [0,0,2,3,0,0,0,0,0,0,0,0,0,0,3,0,3,3,3,3,0,0,0] },
+                { id: 'COL-D16 (Preparador 1)', pct: '67%', lvls: [0,0,2,3,0,0,0,0,0,2,0,0,2,0,3,0,3,3,3,3,0,0,0] },
+                { id: 'COL-D17 (Preparador 2)', pct: '67%', lvls: [0,0,0,3,0,2,0,0,0,2,2,0,0,0,3,0,3,3,3,3,0,0,0] }
+            ];
+
+            // Atividades do Setor Apoio (15 operações)
+            const ativApoio = [
+                'Furadeira', 'Contr. sobressal.', 'Trat. térmico', 'Suporte prod.', 'Monit. ferram.',
+                'Ajuste bancada', 'Lavagem ferram.', 'Armaz. ferram.', 'Descarte resíduo', 'Atend. emerg.',
+                'Manut. montagem', 'Uso de EPI', 'Matriz versat.', 'Lean Manuf.', 'FMEA 4ª ed'
+            ];
+
+            // 10 Colaboradores do Apoio anonimizados
+            const colabApoio = [
+                { id: 'COL-A01 (Gestor)', pct: '94%', lvls: [4,4,0,4,4,4,4,4,3,3,0,3,4,4,4] },
+                { id: 'COL-A02 (Técnico Esp.)', pct: '87%', lvls: [4,4,2,4,4,4,4,4,3,3,4,3,3,2,4] },
+                { id: 'COL-A03 (Líder Bancada)', pct: '75%', lvls: [3,3,3,3,3,3,3,3,3,3,3,3,3,0,0] },
+                { id: 'COL-A04 (Apoio Sênior)', pct: '67%', lvls: [3,2,0,2,3,2,3,3,3,3,0,3,3,2,0] },
+                { id: 'COL-A05 (Manut. Estampos)', pct: '75%', lvls: [3,0,0,3,3,3,3,3,3,3,3,3,3,0,0] },
+                { id: 'COL-A06 (Montador 1)', pct: '60%', lvls: [2,0,0,2,2,2,2,2,3,3,0,3,3,0,0] },
+                { id: 'COL-A07 (Montador 2)', pct: '60%', lvls: [2,0,0,2,2,2,2,2,3,3,0,3,3,0,0] },
+                { id: 'COL-A08 (Montador 3)', pct: '60%', lvls: [2,0,0,2,2,2,2,2,3,3,0,3,3,0,0] },
+                { id: 'COL-A09 (Auxiliar)', pct: '45%', lvls: [1,0,0,1,1,1,1,1,3,3,0,3,3,0,0] },
+                { id: 'COL-A10 (Organizador 5S)', pct: '70%', lvls: [3,0,0,3,2,3,3,3,3,3,0,3,3,0,0] }
+            ];
+
+            function renderVersatilityTable() {
+                const isDev = currentSector === 'dev';
+                const ativs = isDev ? ativDev : ativApoio;
+                const colabs = isDev ? colabDev : colabApoio;
+
+                let html = '<thead><tr class="border-b border-cae-border bg-cae-surface/90">';
+                html += '<th class="p-2 sticky left-0 bg-cae-surface z-10 min-w-[170px] text-cae-teal font-extrabold">COLABORADOR</th>';
+                html += '<th class="p-2 text-center text-cae-amber font-bold min-w-[65px]">% TÉC</th>';
+
+                ativs.forEach(at => {
+                    html += `<th class="p-1.5 text-center text-cae-muted text-[10px] min-w-[75px] font-normal border-l border-cae-border/50 truncate" title="${at}">${at}</th>`;
+                });
+                html += '</tr></thead><tbody>';
+
+                colabs.forEach((c, i) => {
+                    html += `<tr class="border-b border-cae-border/40 hover:bg-cae-surface/40 transition">`;
+                    html += `<td class="p-2 sticky left-0 bg-cae-surface font-bold text-cae-text border-r border-cae-border">${c.id}</td>`;
+                    html += `<td class="p-2 text-center font-extrabold text-cae-teal border-r border-cae-border">${c.pct}</td>`;
+
+                    c.lvls.forEach(lvl => {
+                        let cls = 'lvl-0';
+                        if (lvl === 1) cls = 'lvl-1';
+                        else if (lvl === 2) cls = 'lvl-2';
+                        else if (lvl === 3) cls = 'lvl-3';
+                        else if (lvl === 4) cls = 'lvl-4';
+                        html += `<td class="p-1 text-center border-r border-cae-border/30"><span class="inline-block w-5 h-5 leading-5 rounded text-center font-bold text-[10px] ${cls}">${lvl}</span></td>`;
+                    });
+                    html += '</tr>';
+                });
+
+                html += '</tbody>';
+                tableVersatilidade.innerHTML = html;
+            }
+
+            btnSectorDev.addEventListener('click', () => {
+                currentSector = 'dev';
+                btnSectorDev.className = 'px-2.5 py-1 rounded bg-cae-teal text-cae-bg font-extrabold shadow-sm transition';
+                btnSectorApoio.className = 'px-2.5 py-1 rounded text-cae-muted hover:text-cae-text font-bold transition';
+                renderVersatilityTable();
+            });
+
+            btnSectorApoio.addEventListener('click', () => {
+                currentSector = 'apoio';
+                btnSectorApoio.className = 'px-2.5 py-1 rounded bg-cae-teal text-cae-bg font-extrabold shadow-sm transition';
+                btnSectorDev.className = 'px-2.5 py-1 rounded text-cae-muted hover:text-cae-text font-bold transition';
+                renderVersatilityTable();
+            });
+
+            renderVersatilityTable();
+
+            /* =========================================================================
+               MÓDULO 2: MATRIZ 9-BOX & SIMULADOR DE PERSONA (CHART.JS 2D SCATTER)
+               ========================================================================= */
+            let chartScatter = null;
+            const badgePersonaStatus = document.getElementById('badgePersonaStatus');
+            const slPersonaTec = document.getElementById('slPersonaTec');
+            const valPersonaTec = document.getElementById('valPersonaTec');
+            const fillPersonaTec = document.getElementById('fillPersonaTec');
+
+            const slPersonaDisc = document.getElementById('slPersonaDisc');
+            const valPersonaDisc = document.getElementById('valPersonaDisc');
+            const fillPersonaDisc = document.getElementById('fillPersonaDisc');
+
+            const slPersonaComp = document.getElementById('slPersonaComp');
+            const valPersonaComp = document.getElementById('valPersonaComp');
+            const fillPersonaComp = document.getElementById('fillPersonaComp');
+
+            const badgeTrilha = document.getElementById('badgeTrilha');
+            const lblPersonaQuadrant = document.getElementById('lblPersonaQuadrant');
+            const lblPersonaPDI = document.getElementById('lblPersonaPDI');
+
+            const btnPreset1 = document.getElementById('btnPreset1');
+            const btnPreset2 = document.getElementById('btnPreset2');
+            const btnPreset3 = document.getElementById('btnPreset3');
+            const btnPreset4 = document.getElementById('btnPreset4');
+
+            // 27 Colaboradores Reais Anonimizados plotados na Matriz 9-Box
+            const teamScatterPoints = [
+                { x: 65, y: 82, label: 'COL-D01' }, { x: 60, y: 79, label: 'COL-D02' },
+                { x: 63, y: 83, label: 'COL-D03' }, { x: 78, y: 84, label: 'COL-D04' },
+                { x: 62, y: 75, label: 'COL-D05' }, { x: 62, y: 83, label: 'COL-D06' },
+                { x: 65, y: 80, label: 'COL-D07' }, { x: 55, y: 75, label: 'COL-D08' },
+                { x: 68, y: 78, label: 'COL-D09' }, { x: 40, y: 70, label: 'COL-D10' },
+                { x: 54, y: 75, label: 'COL-D11' }, { x: 58, y: 75, label: 'COL-D12' },
+                { x: 50, y: 75, label: 'COL-D13' }, { x: 47, y: 71, label: 'COL-D14' },
+                { x: 43, y: 71, label: 'COL-D15' }, { x: 50, y: 67, label: 'COL-D16' },
+                { x: 68, y: 67, label: 'COL-D17' }, { x: 65, y: 94, label: 'COL-A01' },
+                { x: 62, y: 87, label: 'COL-A02' }, { x: 78, y: 75, label: 'COL-A03' },
+                { x: 56, y: 67, label: 'COL-A04' }, { x: 62, y: 75, label: 'COL-A05' },
+                { x: 62, y: 60, label: 'COL-A06' }, { x: 62, y: 60, label: 'COL-A07' },
+                { x: 53, y: 60, label: 'COL-A08' }, { x: 58, y: 45, label: 'COL-A09' },
+                { x: 65, y: 70, label: 'COL-A10' }
+            ];
+
+            // Plugin de Quadrantes 9-Box no fundo do Chart.js
+            const nineBoxQuadrantPlugin = {
+                id: 'nineBoxQuadrants',
+                beforeDraw(chart) {
+                    const { ctx, chartArea: { top, bottom, left, right }, scales: { x, y } } = chart;
+                    if (!x || !y) return;
+
+                    ctx.save();
+                    const x60 = x.getPixelForValue(60);
+                    const x75 = x.getPixelForValue(75);
+                    const y50 = y.getPixelForValue(50);
+                    const y75 = y.getPixelForValue(75);
+
+                    // Linhas divisórias 9-Box
+                    ctx.strokeStyle = 'rgba(148, 163, 184, 0.18)';
+                    ctx.lineWidth = 1;
+                    ctx.setLineDash([4, 4]);
+
+                    // Verticais (Comportamental 60% e 75%)
+                    ctx.beginPath(); ctx.moveTo(x60, top); ctx.lineTo(x60, bottom); ctx.stroke();
+                    ctx.beginPath(); ctx.moveTo(x75, top); ctx.lineTo(x75, bottom); ctx.stroke();
+
+                    // Horizontais (Técnico 50% e 75%)
+                    ctx.beginPath(); ctx.moveTo(left, y50); ctx.lineTo(right, y50); ctx.stroke();
+                    ctx.beginPath(); ctx.moveTo(left, y75); ctx.lineTo(right, y75); ctx.stroke();
+                    ctx.setLineDash([]);
+
+                    // Destaque do Quadrante Superior Direito (Alto Desempenho / Referência)
+                    ctx.fillStyle = 'rgba(20, 184, 166, 0.08)';
+                    ctx.fillRect(x75, top, right - x75, y75 - top);
+
+                    // Rótulos sutis de quadrantes
+                    ctx.font = "bold 8.5px 'JetBrains Mono', monospace";
+                    ctx.fillStyle = 'rgba(20, 184, 166, 0.65)';
+                    ctx.textAlign = 'right';
+                    ctx.fillText('⭐ ALTO DESEMPENHO', right - 6, top + 14);
+
+                    ctx.fillStyle = 'rgba(245, 158, 11, 0.65)';
+                    ctx.textAlign = 'left';
+                    ctx.fillText('⚙️ ESPECIALISTA TÉCNICO', left + 6, top + 14);
+
+                    ctx.fillStyle = 'rgba(148, 163, 184, 0.6)';
+                    ctx.fillText('EM DESENVOLVIMENTO', left + 6, bottom - 8);
+
+                    ctx.restore();
+                }
+            };
+
+            function initScatterChart() {
+                const c = getThemeColors();
+                const ctx = document.getElementById('chartScatter9Box').getContext('2d');
+
+                chartScatter = new Chart(ctx, {
+                    type: 'scatter',
+                    plugins: [nineBoxQuadrantPlugin],
+                    data: {
+                        datasets: [
+                            {
+                                label: 'Equipe da Ferramentaria (27 Colab.)',
+                                data: teamScatterPoints,
+                                backgroundColor: 'rgba(148, 163, 184, 0.55)',
+                                borderColor: 'rgba(255, 255, 255, 0.4)',
+                                borderWidth: 1,
+                                pointRadius: 5,
+                                pointHoverRadius: 7
+                            },
+                            {
+                                label: '⭐ PERSONA SIMULADA',
+                                data: [{ x: 55, y: 85 }],
+                                backgroundColor: '#2DD4BF',
+                                borderColor: '#FFFFFF',
+                                borderWidth: 2.5,
+                                pointRadius: 9,
+                                pointHoverRadius: 11,
+                                pointStyle: 'circle'
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            x: {
+                                min: 25,
+                                max: 100,
+                                title: {
+                                    display: true,
+                                    text: 'Competências Comportamentais (%) ▶',
+                                    color: c.muted,
+                                    font: { family: 'JetBrains Mono', size: 9.5 }
+                                },
+                                ticks: {
+                                    stepSize: 10,
+                                    color: c.muted,
+                                    font: { family: 'JetBrains Mono', size: 9 },
+                                    callback: v => `${v}%`
+                                },
+                                grid: { color: c.grid }
+                            },
+                            y: {
+                                min: 20,
+                                max: 100,
+                                title: {
+                                    display: true,
+                                    text: '▲ Competências Técnicas (%)',
+                                    color: c.muted,
+                                    font: { family: 'JetBrains Mono', size: 9.5 }
+                                },
+                                ticks: {
+                                    stepSize: 10,
+                                    color: c.muted,
+                                    font: { family: 'JetBrains Mono', size: 9 },
+                                    callback: v => `${v}%`
+                                },
+                                grid: { color: c.grid }
+                            }
+                        },
+                        plugins: {
+                            legend: {
+                                position: 'top',
+                                labels: {
+                                    color: c.text,
+                                    font: { family: 'JetBrains Mono', size: 9 },
+                                    boxWidth: 10
+                                }
+                            },
+                            tooltip: {
+                                callbacks: {
+                                    label: function(ctx) {
+                                        if (ctx.datasetIndex === 0) {
+                                            const item = teamScatterPoints[ctx.dataIndex];
+                                            return `${item.label}: Comp ${item.x}% • Téc ${item.y}%`;
+                                        }
+                                        return `⭐ PERSONA: Comp ${ctx.parsed.x}% • Téc ${ctx.parsed.y}%`;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+
+            function updatePersonaSimulation() {
+                const tec = parseInt(slPersonaTec.value);
+                const disc = parseInt(slPersonaDisc.value);
+                const compGroup = parseInt(slPersonaComp.value);
+
+                // Comportamental consolidado (50% disciplina/5S + 50% comunicação/conduta)
+                const compFinal = Math.round((disc * 0.55) + (compGroup * 0.45));
+
+                // Atualizar textos e preenchimentos
+                valPersonaTec.textContent = `${tec}%`;
+                fillPersonaTec.style.width = `${((tec - 20) / (100 - 20)) * 100}%`;
+
+                valPersonaDisc.textContent = `${disc}%`;
+                fillPersonaDisc.style.width = `${((disc - 20) / (100 - 20)) * 100}%`;
+
+                valPersonaComp.textContent = `${compGroup}%`;
+                fillPersonaComp.style.width = `${((compGroup - 20) / (100 - 20)) * 100}%`;
+
+                // Diagnóstico do Quadrante & Trilha PDI
+                let quadrante = '';
+                let pdi = '';
+                let badgeClass = '';
+                let trilha = '';
+
+                const mediaGeral = Math.round((tec * 0.5) + (compFinal * 0.5));
+
+                if (mediaGeral >= 80) {
+                    trilha = 'Acima de 80%: Alto Desempenho';
+                    badgeClass = 'px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/20 text-cae-teal border border-cae-teal/30';
+                } else if (mediaGeral >= 51) {
+                    trilha = '51 a 79%: Médio Desempenho';
+                    badgeClass = 'px-2 py-0.5 rounded text-[10px] font-bold bg-amber-500/20 text-cae-amber border border-cae-amber/30';
+                } else if (mediaGeral >= 26) {
+                    trilha = '26 a 50%: Desempenho Regular';
+                    badgeClass = 'px-2 py-0.5 rounded text-[10px] font-bold bg-amber-500/30 text-cae-amber';
+                } else {
+                    trilha = '0 a 25%: Baixo Desempenho';
+                    badgeClass = 'px-2 py-0.5 rounded text-[10px] font-bold bg-red-500/20 text-cae-danger';
+                }
+                badgeTrilha.textContent = trilha;
+                badgeTrilha.className = badgeClass;
+
+                if (tec >= 75 && compFinal >= 75) {
+                    quadrante = 'Quadrante: Alto Desempenho & Referência da Ferramentaria';
+                    pdi = 'PDI Recomendado: Preparar para papel de multiplicador técnico (Nível 4), mentoria de novos operadores e condução de melhorias Kaizen em estampos.';
+                } else if (tec >= 70 && compFinal < 65) {
+                    quadrante = 'Quadrante: Especialista Técnico com Gap Comportamental (Perfil Persona FN)';
+                    pdi = 'PDI Recomendado: Manter autonomia em usinagem/ajuste, com plano de ação focado no cumprimento de rotinas 5S de bancada, apontamento de ordens no Kanban e transparência na ausência de supervisão.';
+                } else if (tec < 60 && compFinal >= 70) {
+                    quadrante = 'Quadrante: Alto Engajamento com Necessidade de Treinamento Técnico';
+                    pdi = 'PDI Recomendado: Investir em capacitação formal em leitura/interpretação de desenho e operação de máquinas operatrizes (CNC / Retífica) para elevar autonomia do Nível 1 para Nível 3.';
+                } else if (tec < 60 && compFinal < 55) {
+                    quadrante = 'Quadrante: Em Desenvolvimento com Atenção Prioritária';
+                    pdi = 'PDI Recomendado: Acompanhamento quinzenal pelo supervisor, definição clara de entregas esperadas nas avaliações de 45 e 90 dias, e alinhamento rígido às normas de conduta e assiduidade.';
+                } else {
+                    quadrante = 'Quadrante: Desempenho Equilibrado em Consolidação';
+                    pdi = 'PDI Recomendado: Fortalecimento das habilidades técnicas intermediárias e participação em grupos multifuncionais para aumento de cooperação entre turnos.';
+                }
+
+                lblPersonaQuadrant.textContent = quadrante;
+                lblPersonaPDI.textContent = pdi;
+                badgePersonaStatus.textContent = `Persona: Comp ${compFinal}% • Téc ${tec}% (${trilha.split(':')[0]})`;
+
+                // Atualizar posição da Persona no gráfico Scatter em tempo real
+                if (chartScatter) {
+                    chartScatter.data.datasets[1].data = [{ x: compFinal, y: tec }];
+                    chartScatter.update('none'); // redraw a 60 FPS sem animação pesada
+                }
+            }
+
+            [slPersonaTec, slPersonaDisc, slPersonaComp].forEach(sl => {
+                sl.addEventListener('input', updatePersonaSimulation);
+            });
+
+            // Presets
+            btnPreset1.addEventListener('click', () => {
+                slPersonaTec.value = 85;
+                slPersonaDisc.value = 50;
+                slPersonaComp.value = 60;
+                updatePersonaSimulation();
+            });
+
+            btnPreset2.addEventListener('click', () => {
+                slPersonaTec.value = 92;
+                slPersonaDisc.value = 90;
+                slPersonaComp.value = 88;
+                updatePersonaSimulation();
+            });
+
+            btnPreset3.addEventListener('click', () => {
+                slPersonaTec.value = 80;
+                slPersonaDisc.value = 40;
+                slPersonaComp.value = 48;
+                updatePersonaSimulation();
+            });
+
+            btnPreset4.addEventListener('click', () => {
+                slPersonaTec.value = 65;
+                slPersonaDisc.value = 85;
+                slPersonaComp.value = 82;
+                updatePersonaSimulation();
+            });
+
+            /* =========================================================================
+               MÓDULO 3: PARETO DE GAPS & COMUNICADO DE FEEDBACK
+               ========================================================================= */
+            let chartPareto = null;
+
+            function initParetoChart() {
+                const c = getThemeColors();
+                const ctx = document.getElementById('chartParetoGaps').getContext('2d');
+
+                chartPareto = new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: [
+                            '1. Disciplina (5S & Kanban)',
+                            '2. Organização (Bancadas)',
+                            '3. Cód. de Conduta',
+                            '4. Qualidade (Conferência)',
+                            '5. Cooperação Turnos',
+                            '6. Frequência / Pontual.'
+                        ],
+                        datasets: [
+                            {
+                                type: 'bar',
+                                label: 'Frequência de Ocorrência (%)',
+                                data: [27, 27, 17, 15, 8, 6],
+                                backgroundColor: [
+                                    c.danger,
+                                    c.danger,
+                                    c.amber,
+                                    c.amber,
+                                    c.teal,
+                                    c.teal
+                                ],
+                                borderRadius: 6,
+                                barPercentage: 0.55,
+                                yAxisID: 'y'
+                            },
+                            {
+                                type: 'line',
+                                label: 'Curva Acumulada (%)',
+                                data: [27, 54, 71, 86, 94, 100],
+                                borderColor: '#F8FAFC',
+                                backgroundColor: 'transparent',
+                                borderWidth: 2.2,
+                                pointRadius: 4.5,
+                                pointBackgroundColor: c.amber,
+                                tension: 0.25,
+                                yAxisID: 'y1'
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            x: {
+                                ticks: { color: c.muted, font: { family: 'JetBrains Mono', size: 9 } },
+                                grid: { display: false }
+                            },
+                            y: {
+                                position: 'left',
+                                suggestedMax: 35,
+                                ticks: {
+                                    color: c.muted,
+                                    font: { family: 'JetBrains Mono', size: 9 },
+                                    callback: v => `${v}%`
+                                },
+                                grid: { color: c.grid }
+                            },
+                            y1: {
+                                position: 'right',
+                                min: 0,
+                                max: 100,
+                                ticks: {
+                                    color: c.amber,
+                                    font: { family: 'JetBrains Mono', size: 9 },
+                                    callback: v => `${v}%`
+                                },
+                                grid: { display: false }
+                            }
+                        },
+                        plugins: {
+                            legend: {
+                                position: 'top',
+                                labels: {
+                                    color: c.text,
+                                    font: { family: 'JetBrains Mono', size: 9 },
+                                    boxWidth: 10
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+
+            // Alternância de tema
+            themeToggle.addEventListener('click', () => {
+                const next = htmlEl.getAttribute('data-theme') === 'light' ? 'dark' : 'light';
+                htmlEl.setAttribute('data-theme', next);
+                localStorage.setItem('rv_theme', next);
+                syncThemeUi();
+
+                const c = getThemeColors();
+                if (chartScatter) {
+                    chartScatter.options.scales.x.ticks.color = c.muted;
+                    chartScatter.options.scales.x.grid.color = c.grid;
+                    chartScatter.options.scales.y.ticks.color = c.muted;
+                    chartScatter.options.scales.y.grid.color = c.grid;
+                    chartScatter.options.plugins.legend.labels.color = c.text;
+                    chartScatter.update('none');
+                }
+                if (chartPareto) {
+                    chartPareto.options.scales.x.ticks.color = c.muted;
+                    chartPareto.options.scales.y.ticks.color = c.muted;
+                    chartPareto.options.scales.y.grid.color = c.grid;
+                    chartPareto.options.plugins.legend.labels.color = c.text;
+                    chartPareto.update('none');
+                }
+            });
+
+            syncThemeUi();
+            updatePersonaSimulation();
+        })();
+    </script>
+</body>
+</html>

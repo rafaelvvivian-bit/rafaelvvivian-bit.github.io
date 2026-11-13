@@ -1,0 +1,754 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Painel A3, Ishikawa 6M &amp; Capabilidade Cpk | Rafael Vivian</title>
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        cae: {
+                            bg: 'var(--cae-bg)',
+                            surface: 'var(--cae-surface)',
+                            text: 'var(--cae-text)',
+                            muted: 'var(--cae-muted)',
+                            teal: 'var(--cae-teal)',
+                            teal_hover: 'var(--cae-teal-hover)',
+                            amber: 'var(--cae-amber)',
+                            border: 'var(--cae-border)'
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['"Plus Jakarta Sans"', 'sans-serif'],
+                        mono: ['"JetBrains Mono"', 'monospace']
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        :root,
+        [data-theme="dark"] {
+            --cae-bg: #090E17;
+            --cae-surface: #131E31;
+            --cae-panel-bg: rgba(19, 30, 49, 0.76);
+            --cae-text: #F1F5F9;
+            --cae-muted: #94A3B8;
+            --cae-primary: #14B8A6;
+            --cae-teal: #14B8A6;
+            --cae-teal-hover: #2DD4BF;
+            --cae-amber: #F59E0B;
+            --cae-border: rgba(241, 245, 249, 0.12);
+            --cae-track: rgba(241, 245, 249, 0.1);
+            --cae-grid: rgba(241, 245, 249, 0.08);
+            --cae-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.35);
+            --cae-slider-grad-start: #0F3D5E;
+            --cae-slider-grad-end: #14B8A6;
+        }
+
+        [data-theme="light"] {
+            --cae-bg: #F6F7F9;
+            --cae-surface: #FFFFFF;
+            --cae-panel-bg: rgba(255, 255, 255, 0.94);
+            --cae-text: #0F172A;
+            --cae-muted: #64748B;
+            --cae-primary: #0F3D5E;
+            --cae-teal: #0D9488;
+            --cae-teal-hover: #15527C;
+            --cae-amber: #D97706;
+            --cae-border: rgba(15, 23, 42, 0.14);
+            --cae-track: rgba(15, 23, 42, 0.12);
+            --cae-grid: rgba(15, 23, 42, 0.10);
+            --cae-shadow: 0 12px 32px -8px rgba(15, 23, 42, 0.09);
+            --cae-slider-grad-start: #0F3D5E;
+            --cae-slider-grad-end: #0D9488;
+        }
+
+        body {
+            background-color: var(--cae-bg);
+            color: var(--cae-text);
+            background-image: radial-gradient(circle at top right, rgba(20, 184, 166, 0.06), transparent 40%),
+                              radial-gradient(circle at bottom left, rgba(245, 158, 11, 0.04), transparent 40%);
+            overflow-x: hidden;
+            transition: background-color 0.25s ease, color 0.25s ease;
+        }
+
+        .glass-panel {
+            background: var(--cae-panel-bg);
+            backdrop-filter: blur(12px);
+            border: 1px solid var(--cae-border);
+            box-shadow: var(--cae-shadow);
+            border-radius: 16px;
+        }
+
+        .tab-btn.active {
+            border-color: var(--cae-teal);
+            background-color: rgba(20, 184, 166, 0.15);
+            color: var(--cae-teal);
+        }
+
+        .m-btn.active {
+            border-color: var(--cae-amber);
+            background-color: rgba(245, 158, 11, 0.15);
+            color: var(--cae-amber);
+        }
+
+        .hmi-slider-container { position: relative; padding: 6px 0; }
+        input[type=range] {
+            -webkit-appearance: none; width: 100%; background: transparent; position: relative; z-index: 5;
+        }
+        input[type=range]:focus { outline: none; }
+        input[type=range]:focus-visible { outline: 2px solid var(--cae-teal); outline-offset: 4px; border-radius: 4px; }
+        input[type=range]::-webkit-slider-runnable-track {
+            width: 100%; height: 6px; cursor: pointer; background: var(--cae-track); border-radius: 3px;
+        }
+        input[type=range]::-webkit-slider-thumb {
+            height: 18px; width: 18px; border-radius: 50%; background: var(--cae-surface); cursor: pointer;
+            -webkit-appearance: none; margin-top: -6px;
+            box-shadow: 0 0 8px rgba(0, 0, 0, 0.35), 0 0 0 3px var(--cae-surface), 0 0 0 5px var(--cae-teal);
+        }
+        .slider-fill {
+            position: absolute; top: 12px; left: 0; height: 6px;
+            background: linear-gradient(90deg, var(--cae-slider-grad-start), var(--cae-slider-grad-end));
+            border-radius: 3px; pointer-events: none; transition: width 0.08s linear;
+        }
+    </style>
+</head>
+<body class="min-h-screen p-3 md:p-4 flex flex-col font-sans">
+
+    <!-- HEADER -->
+    <header class="glass-panel px-5 py-2.5 mb-3.5 flex flex-wrap justify-between items-center gap-3">
+        <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-lg bg-cae-surface border border-cae-border flex items-center justify-center shadow-lg relative overflow-hidden">
+                <div class="absolute inset-0 bg-cae-teal/20"></div>
+                <svg class="w-5 h-5 text-cae-teal relative z-10" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                </svg>
+            </div>
+            <div>
+                <div class="flex flex-wrap items-center gap-2">
+                    <h1 class="text-lg md:text-xl font-extrabold text-cae-text tracking-tight uppercase">Resolução de Problemas A3, 6M &amp; Capabilidade</h1>
+                    <span class="px-2 py-0.5 rounded bg-cae-amber/15 border border-cae-amber/40 text-cae-amber text-[10px] font-mono font-bold uppercase">Dados Anonimizados • Sigilo NDA</span>
+                </div>
+                <p class="text-cae-teal font-mono text-[11px] md:text-xs mt-0.5 uppercase tracking-widest">Alinhamento Dimensional de Ferramental (Cpk) • Estabilidade Hora-a-Hora &amp; Ishikawa 6M</p>
+            </div>
+        </div>
+        <div class="flex items-center gap-2.5">
+            <a href="../index.html#cases" class="px-2.5 py-1 rounded-lg bg-cae-surface border border-cae-border text-xs font-mono font-bold text-cae-text hover:border-cae-teal transition">
+                ← Portfólio
+            </a>
+            <button type="button" id="themeToggle" aria-label="Alternar tema claro/escuro" class="px-2.5 py-1 rounded-lg bg-cae-surface border border-cae-border text-xs font-mono font-bold text-cae-teal hover:border-cae-teal transition">
+                Tema: Escuro
+            </button>
+        </div>
+    </header>
+
+    <!-- NAVEGAÇÃO ENTRE FRENTES DO CASE -->
+    <div class="flex flex-wrap items-center justify-between gap-2 mb-3.5">
+        <div class="flex flex-wrap gap-2" role="tablist" aria-label="Frentes de Análise Industrial">
+            <button type="button" role="tab" aria-selected="true" id="tabA3Btn" class="tab-btn active px-3.5 py-2 rounded-xl border border-cae-border bg-cae-surface text-xs font-mono font-bold transition">
+                1. Relatório A3 &amp; Simulador Cpk (Conformação)
+            </button>
+            <button type="button" role="tab" aria-selected="false" id="tabOeeBtn" class="tab-btn px-3.5 py-2 rounded-xl border border-cae-border bg-cae-surface text-xs font-mono font-bold transition">
+                2. Hora-a-Hora &amp; Ishikawa 6M (Célula de Soldagem)
+            </button>
+        </div>
+        <span class="text-[11px] font-mono text-cae-muted">
+            Cotas e nomes reais omitidos • Preservação integral da lógica estatística e dos desvios normalizados
+        </span>
+    </div>
+
+    <!-- ===================================================================== -->
+    <!-- PAINEL 1: A3 & CAPABILIDADE DIMENSIONAL (Cpk)                        -->
+    <!-- ===================================================================== -->
+    <main id="panelA3" class="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-3.5">
+        <!-- ESQUERDA: KPIs + 5 PORQUÊS + FLUXO A3 -->
+        <section class="lg:col-span-5 flex flex-col gap-3.5">
+            <div class="glass-panel p-4 flex flex-col gap-3">
+                <div class="flex justify-between items-center border-b border-cae-border pb-2">
+                    <span class="text-xs font-bold uppercase tracking-widest text-cae-muted">Resultado da Validação (n = 125 peças)</span>
+                    <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-cae-teal/15 text-cae-teal font-bold">Processo Estabilizado</span>
+                </div>
+
+                <div class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-2 gap-2.5">
+                    <div class="bg-cae-bg/80 border border-cae-border rounded-xl px-3 py-2">
+                        <span class="block text-[10px] text-cae-muted uppercase font-bold">Cpk Inicial (Antes)</span>
+                        <span class="text-xl font-mono font-extrabold text-cae-amber">-0,66</span>
+                        <span class="block text-[10px] text-cae-muted">Média abaixo do LIE</span>
+                    </div>
+                    <div class="bg-cae-bg/80 border border-cae-border rounded-xl px-3 py-2">
+                        <span class="block text-[10px] text-cae-muted uppercase font-bold">Cpk Validado (Depois)</span>
+                        <span class="text-xl font-mono font-extrabold text-cae-teal">+0,94</span>
+                        <span class="block text-[10px] text-cae-muted">0 peças abaixo do LIE</span>
+                    </div>
+                    <div class="bg-cae-bg/80 border border-cae-border rounded-xl px-3 py-2">
+                        <span class="block text-[10px] text-cae-muted uppercase font-bold">Dispersão (σ)</span>
+                        <span class="text-lg font-mono font-extrabold text-cae-text">0,009 → 0,007</span>
+                        <span class="block text-[10px] text-cae-muted">mm (repetibilidade alta)</span>
+                    </div>
+                    <div class="bg-cae-bg/80 border border-cae-border rounded-xl px-3 py-2">
+                        <span class="block text-[10px] text-cae-muted uppercase font-bold">Correção no Punção</span>
+                        <span class="text-lg font-mono font-extrabold text-cae-text">+50 μm</span>
+                        <span class="block text-[10px] text-cae-muted">Deslocamento de centro</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 5 PORQUÊS & CAUSA RAIZ -->
+            <div class="glass-panel p-4 flex-1 flex flex-col justify-between gap-3">
+                <div>
+                    <span class="block text-xs font-bold uppercase tracking-widest text-cae-muted mb-2.5">Análise 5 Porquês — Diagnóstico de Engenharia</span>
+                    <ol class="space-y-2 text-xs">
+                        <li class="flex gap-2.5 items-start">
+                            <span class="px-1.5 py-0.5 rounded bg-cae-surface border border-cae-border font-mono text-[10px] font-bold text-cae-amber shrink-0">1º</span>
+                            <span class="text-cae-text"><strong>Ocorrência:</strong> Altura crítica de conformação abaixo do LIE especificado e paradas de linha por ferramental.</span>
+                        </li>
+                        <li class="flex gap-2.5 items-start">
+                            <span class="px-1.5 py-0.5 rounded bg-cae-surface border border-cae-border font-mono text-[10px] font-bold text-cae-amber shrink-0">2º</span>
+                            <span class="text-cae-muted">Punção operando com altura efetiva reduzida durante o curso de conformação da peça.</span>
+                        </li>
+                        <li class="flex gap-2.5 items-start">
+                            <span class="px-1.5 py-0.5 rounded bg-cae-surface border border-cae-border font-mono text-[10px] font-bold text-cae-amber shrink-0">3º</span>
+                            <span class="text-cae-muted">O punção estava <em>aprovado</em> dentro da tolerância do desenho de ferramenta, porém posicionado no limite inferior.</span>
+                        </li>
+                        <li class="flex gap-2.5 items-start">
+                            <span class="px-1.5 py-0.5 rounded bg-cae-surface border border-cae-border font-mono text-[10px] font-bold text-cae-teal shrink-0">4º</span>
+                            <span class="text-cae-muted">Essa faixa permitida no ferramental reduzia a altura conformada além da margem segura do produto.</span>
+                        </li>
+                        <li class="flex gap-2.5 items-start bg-cae-teal/10 border border-cae-teal/30 rounded-xl p-2.5">
+                            <span class="px-1.5 py-0.5 rounded bg-cae-teal text-[#041311] font-mono text-[10px] font-extrabold shrink-0">5º RAIZ</span>
+                            <span class="text-cae-text font-semibold">Tolerância do desenho do ferramental desalinhada em relação à tolerância funcional do produto final.</span>
+                        </li>
+                    </ol>
+                </div>
+
+                <!-- PLANO DE AÇÃO ANONIMIZADO -->
+                <div class="bg-cae-bg/75 border border-cae-border rounded-xl p-3">
+                    <span class="block text-[10px] font-mono font-bold uppercase text-cae-teal mb-1.5">Ciclo A3 Executado (Padronização &amp; Yokoten)</span>
+                    <div class="grid grid-cols-2 gap-1.5 text-[11px] text-cae-muted">
+                        <div><strong class="text-cae-text">1. Contenção:</strong> Ajuste nominal (+50 μm)</div>
+                        <div><strong class="text-cae-text">2. Validação:</strong> Estudo n = 125 pçs</div>
+                        <div><strong class="text-cae-text">3. Desenho:</strong> Revisão de tolerância</div>
+                        <div><strong class="text-cae-text">4. Expansão:</strong> Famílias correlatas</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- DIREITA: SIMULADOR GAUSSIANO & CPK -->
+        <section class="lg:col-span-7 flex flex-col gap-3.5">
+            <div class="glass-panel p-4 flex-1 flex flex-col justify-between gap-3">
+                <div class="flex flex-wrap justify-between items-center gap-2 border-b border-cae-border pb-2.5">
+                    <div>
+                        <h2 class="text-sm font-bold uppercase tracking-wider text-cae-text">Simulador de Capabilidade Dimensional (LIE = 0 μm • LSE = +50 μm)</h2>
+                        <p class="text-[11px] text-cae-muted">Arraste o offset do punção para observar por que corrigir o centro resolveu sem precisar trocar a prensa.</p>
+                    </div>
+                    <div class="flex gap-1.5">
+                        <button type="button" id="presetBefore" class="px-2.5 py-1 rounded-lg border border-cae-amber/50 bg-cae-amber/10 text-cae-amber text-[11px] font-mono font-bold hover:bg-cae-amber/20 transition">Antes (-0,66)</button>
+                        <button type="button" id="presetAfter" class="px-2.5 py-1 rounded-lg border border-cae-teal/50 bg-cae-teal/15 text-cae-teal text-[11px] font-mono font-bold hover:bg-cae-teal/25 transition">Depois (+0,94)</button>
+                    </div>
+                </div>
+
+                <!-- CONTROLES DO SIMULADOR -->
+                <div class="grid grid-cols-1 md:grid-cols-12 gap-3 bg-cae-bg/75 border border-cae-border rounded-xl p-3 items-center">
+                    <div class="md:col-span-5">
+                        <div class="flex justify-between text-xs font-mono mb-1">
+                            <span class="text-cae-muted font-bold">Offset Nominal do Punção (Δμ)</span>
+                            <span class="text-cae-teal font-extrabold" id="offsetVal">+32 μm</span>
+                        </div>
+                        <div class="hmi-slider-container">
+                            <div class="slider-fill" id="offsetFill" style="width: 70%;"></div>
+                            <input type="range" id="offsetSlider" min="-25" max="60" step="1" value="20" aria-label="Offset nominal do punção em micrômetros">
+                        </div>
+                    </div>
+                    <div class="md:col-span-3">
+                        <div class="flex justify-between text-xs font-mono mb-1">
+                            <span class="text-cae-muted font-bold">Desvio σ (μm)</span>
+                            <span class="text-cae-text font-extrabold" id="sigmaVal">7 μm</span>
+                        </div>
+                        <div class="hmi-slider-container">
+                            <div class="slider-fill" id="sigmaFill" style="width: 30%;"></div>
+                            <input type="range" id="sigmaSlider" min="4" max="15" step="1" value="7" aria-label="Desvio padrão do processo em micrômetros">
+                        </div>
+                    </div>
+                    <div class="md:col-span-4 grid grid-cols-2 gap-2 text-center">
+                        <div class="bg-cae-surface border border-cae-border rounded-lg py-1.5 px-2">
+                            <span class="block text-[9px] font-mono uppercase text-cae-muted">Cpk Simulado</span>
+                            <span class="text-base font-mono font-extrabold text-cae-teal" id="simCpk">+0,95</span>
+                        </div>
+                        <div class="bg-cae-surface border border-cae-border rounded-lg py-1.5 px-2">
+                            <span class="block text-[9px] font-mono uppercase text-cae-muted">Abaixo LIE</span>
+                            <span class="text-base font-mono font-extrabold text-cae-amber" id="simReject">0,2%</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- GRÁFICO DISTRIBUIÇÃO NORMAL -->
+                <div class="relative min-h-[295px] flex-1">
+                    <canvas id="cpkChart"></canvas>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- ===================================================================== -->
+    <!-- PAINEL 2: HORA-A-HORA & ISHIKAWA 6M (CÉLULA DE SOLDAGEM)              -->
+    <!-- ===================================================================== -->
+    <main id="panelOee" class="hidden flex-1 grid grid-cols-1 lg:grid-cols-12 gap-3.5">
+        <!-- ESQUERDA: KPIs HORA-A-HORA + ISHIKAWA 6M -->
+        <section class="lg:col-span-5 flex flex-col gap-3.5">
+            <div class="glass-panel p-4 flex flex-col gap-3">
+                <div class="flex justify-between items-center border-b border-cae-border pb-2">
+                    <span class="text-xs font-bold uppercase tracking-widest text-cae-muted">Desempenho em Turno de 10h (Meta: 1.100 un)</span>
+                    <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-cae-teal/15 text-cae-teal font-bold">+187 un/turno</span>
+                </div>
+
+                <div class="grid grid-cols-3 gap-2">
+                    <div class="bg-cae-bg/80 border border-cae-border rounded-xl px-2.5 py-2">
+                        <span class="block text-[10px] text-cae-muted uppercase font-bold">Linha Instável</span>
+                        <span class="text-lg font-mono font-extrabold text-cae-amber">900 un</span>
+                        <span class="block text-[10px] text-cae-muted">81,8% (-200)</span>
+                    </div>
+                    <div class="bg-cae-bg/80 border border-cae-border rounded-xl px-2.5 py-2">
+                        <span class="block text-[10px] text-cae-muted uppercase font-bold">Estabilizada</span>
+                        <span class="text-lg font-mono font-extrabold text-cae-teal">1.087 un</span>
+                        <span class="block text-[10px] text-cae-muted">98,8% (-13)</span>
+                    </div>
+                    <div class="bg-cae-bg/80 border border-cae-border rounded-xl px-2.5 py-2">
+                        <span class="block text-[10px] text-cae-muted uppercase font-bold">Paradas Eletrodo</span>
+                        <span class="text-lg font-mono font-extrabold text-cae-text">90 → 6'</span>
+                        <span class="block text-[10px] text-cae-muted">-93% tempo perdido</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ISHIKAWA 6M INTERATIVO -->
+            <div class="glass-panel p-4 flex-1 flex flex-col gap-3">
+                <div class="flex justify-between items-center">
+                    <span class="text-xs font-bold uppercase tracking-widest text-cae-muted">Inspetor Diagrama de Ishikawa (6M)</span>
+                    <span class="text-[10px] font-mono text-cae-amber">Desgaste &amp; Setup de Eletrodo</span>
+                </div>
+
+                <div class="grid grid-cols-2 sm:grid-cols-3 gap-1.5" role="tablist" aria-label="Categorias 6M de Ishikawa">
+                    <button type="button" role="tab" aria-selected="true" class="m-btn active px-2.5 py-1.5 rounded-lg border border-cae-border bg-cae-bg text-[11px] font-mono font-bold transition" data-m="0">1. Materiais</button>
+                    <button type="button" role="tab" aria-selected="false" class="m-btn px-2.5 py-1.5 rounded-lg border border-cae-border bg-cae-bg text-[11px] font-mono font-bold transition" data-m="1">2. Máquina</button>
+                    <button type="button" role="tab" aria-selected="false" class="m-btn px-2.5 py-1.5 rounded-lg border border-cae-border bg-cae-bg text-[11px] font-mono font-bold transition" data-m="2">3. Método</button>
+                    <button type="button" role="tab" aria-selected="false" class="m-btn px-2.5 py-1.5 rounded-lg border border-cae-border bg-cae-bg text-[11px] font-mono font-bold transition" data-m="3">4. Mão de Obra</button>
+                    <button type="button" role="tab" aria-selected="false" class="m-btn px-2.5 py-1.5 rounded-lg border border-cae-border bg-cae-bg text-[11px] font-mono font-bold transition" data-m="4">5. Meio Amb.</button>
+                    <button type="button" role="tab" aria-selected="false" class="m-btn px-2.5 py-1.5 rounded-lg border border-cae-border bg-cae-bg text-[11px] font-mono font-bold transition" data-m="5">6. Medidas</button>
+                </div>
+
+                <div class="bg-cae-bg/80 border border-cae-border rounded-xl p-3.5 flex-1 flex flex-col justify-between gap-2.5">
+                    <div>
+                        <span class="block text-[11px] font-mono font-bold uppercase text-cae-amber mb-2" id="mTitle">1. Materiais — Causas Mapeadas</span>
+                        <ul class="space-y-1.5 text-xs text-cae-text list-disc pl-4" id="mList"></ul>
+                    </div>
+                    <div class="border-t border-cae-border pt-2.5">
+                        <span class="block text-[10px] font-mono font-bold uppercase text-cae-teal mb-1">Ação de Engenharia Recomendada</span>
+                        <p class="text-xs text-cae-muted" id="mAction"></p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- DIREITA: GRÁFICO HORA-A-HORA -->
+        <section class="lg:col-span-7 flex flex-col gap-3.5">
+            <div class="glass-panel p-4 flex-1 flex flex-col justify-between gap-3">
+                <div class="flex flex-wrap justify-between items-center gap-2 border-b border-cae-border pb-2.5">
+                    <div>
+                        <h2 class="text-sm font-bold uppercase tracking-wider text-cae-text">Comparativo Hora-a-Hora (07h–17h | Meta 1.100 un)</h2>
+                        <p class="text-[11px] text-cae-muted">Impacto direto de 14 microajustes de 5' + 2 trocas de 10' vs. operação estabilizada.</p>
+                    </div>
+                    <div class="flex gap-1.5">
+                        <button type="button" id="modeCompareBtn" class="px-2.5 py-1 rounded-lg border border-cae-teal/50 bg-cae-teal/15 text-cae-teal text-[11px] font-mono font-bold transition">Comparar Ambos</button>
+                        <button type="button" id="modeLossBtn" class="px-2.5 py-1 rounded-lg border border-cae-border bg-cae-bg text-cae-muted text-[11px] font-mono font-bold hover:border-cae-amber transition">Saldo Acumulado</button>
+                    </div>
+                </div>
+
+                <div class="relative min-h-[300px] flex-1">
+                    <canvas id="hourlyChart"></canvas>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5 text-xs">
+                    <div class="bg-cae-bg/75 border border-cae-amber/30 rounded-xl p-2.5">
+                        <strong class="text-cae-amber font-mono block text-[11px] uppercase mb-0.5">Condição Crônica (-200 un)</strong>
+                        <span class="text-cae-muted">Perda constante de -20 a -30 un/hora causada por intervenções reativas no eletrodo a cada ciclo curto.</span>
+                    </div>
+                    <div class="bg-cae-bg/75 border border-cae-teal/30 rounded-xl p-2.5">
+                        <strong class="text-cae-teal font-mono block text-[11px] uppercase mb-0.5">Condição Estabilizada (-13 un)</strong>
+                        <span class="text-cae-muted">8 de 10 faixas horárias cravadas em 100% da meta, com apenas dois microajustes pontuais de 3 min.</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <script>
+        (function () {
+            const themeBtn = document.getElementById('themeToggle');
+            const root = document.documentElement;
+            let currentTheme = localStorage.getItem('rv_theme') === 'light' ? 'light' : 'dark';
+
+            function applyTheme(theme) {
+                currentTheme = theme;
+                root.setAttribute('data-theme', theme);
+                localStorage.setItem('rv_theme', theme);
+                themeBtn.textContent = theme === 'dark' ? 'Tema: Escuro' : 'Tema: Claro';
+                if (cpkChart) updateCpkSimulation();
+                if (hourlyChart) renderHourlyChart();
+            }
+
+            themeBtn.addEventListener('click', () => {
+                applyTheme(currentTheme === 'dark' ? 'light' : 'dark');
+            });
+
+            // Tabs
+            const tabA3Btn = document.getElementById('tabA3Btn');
+            const tabOeeBtn = document.getElementById('tabOeeBtn');
+            const panelA3 = document.getElementById('panelA3');
+            const panelOee = document.getElementById('panelOee');
+
+            function switchMainTab(target) {
+                const isA3 = target === 'a3';
+                panelA3.classList.toggle('hidden', !isA3);
+                panelOee.classList.toggle('hidden', isA3);
+                tabA3Btn.classList.toggle('active', isA3);
+                tabOeeBtn.classList.toggle('active', !isA3);
+                tabA3Btn.setAttribute('aria-selected', String(isA3));
+                tabOeeBtn.setAttribute('aria-selected', String(!isA3));
+                if (!isA3 && hourlyChart) hourlyChart.resize();
+                if (isA3 && cpkChart) cpkChart.resize();
+            }
+
+            tabA3Btn.addEventListener('click', () => switchMainTab('a3'));
+            tabOeeBtn.addEventListener('click', () => switchMainTab('oee'));
+
+            // Helpers CSS Colors
+            function getVar(name) {
+                return getComputedStyle(root).getPropertyValue(name).trim();
+            }
+
+            // =================================================================
+            // CHART 1: CAPABILIDADE GAUSSIANA & SIMULAÇÃO CPK
+            // =================================================================
+            const offsetSlider = document.getElementById('offsetSlider');
+            const sigmaSlider = document.getElementById('sigmaSlider');
+            const offsetVal = document.getElementById('offsetVal');
+            const sigmaVal = document.getElementById('sigmaVal');
+            const offsetFill = document.getElementById('offsetFill');
+            const sigmaFill = document.getElementById('sigmaFill');
+            const simCpkEl = document.getElementById('simCpk');
+            const simRejectEl = document.getElementById('simReject');
+
+            // Normal CDF approximation (Abramowitz & Stegun)
+            function normCdf(z) {
+                const t = 1 / (1 + 0.2316419 * Math.abs(z));
+                const d = 0.3989423 * Math.exp(-z * z / 2);
+                let prob = d * t * (0.3193815 + t * (-0.3565638 + t * (1.781478 + t * (-1.821256 + t * 1.330274))));
+                return z > 0 ? 1 - prob : prob;
+            }
+
+            let cpkChart = null;
+            const cpkCtx = document.getElementById('cpkChart').getContext('2d');
+
+            function updateSliderFill(slider, fill) {
+                const min = parseFloat(slider.min);
+                const max = parseFloat(slider.max);
+                const val = parseFloat(slider.value);
+                fill.style.width = `${((val - min) / (max - min)) * 100}%`;
+            }
+
+            function updateCpkSimulation() {
+                const mu = parseFloat(offsetSlider.value); // Normalized um relative to LIE = 0
+                const sigma = parseFloat(sigmaSlider.value); // um
+                const LSL = 0;
+                const USL = 50;
+
+                updateSliderFill(offsetSlider, offsetFill);
+                updateSliderFill(sigmaSlider, sigmaFill);
+                offsetVal.textContent = `${mu >= 0 ? '+' : ''}${mu} μm`;
+                sigmaVal.textContent = `${sigma} μm`;
+
+                const cpu = (USL - mu) / (3 * sigma);
+                const cpl = (mu - LSL) / (3 * sigma);
+                const cpk = Math.min(cpu, cpl);
+                const rejectBelow = normCdf((LSL - mu) / sigma) * 100;
+
+                simCpkEl.textContent = `${cpk >= 0 ? '+' : ''}${cpk.toFixed(2).replace('.', ',')}`;
+                simCpkEl.style.color = cpk >= 0.9 ? getVar('--cae-teal') : getVar('--cae-amber');
+                simRejectEl.textContent = `${rejectBelow.toFixed(1).replace('.', ',')}%`;
+
+                // Build Gaussian curves (Initial baseline: mu=-17.8, sigma=9 => Cpk=-0.66; Live curve: mu, sigma)
+                const xs = [];
+                const livePts = [];
+                const beforePts = [];
+                for (let x = -45; x <= 75; x += 2) {
+                    xs.push(`${x >= 0 ? '+' : ''}${x}`);
+                    const yLive = (1 / (sigma * Math.sqrt(2 * Math.PI))) * Math.exp(-0.5 * Math.pow((x - mu) / sigma, 2));
+                    const yBefore = (1 / (9 * Math.sqrt(2 * Math.PI))) * Math.exp(-0.5 * Math.pow((x - (-17.8)) / 9, 2));
+                    livePts.push(Number((yLive * 100).toFixed(3)));
+                    beforePts.push(Number((yBefore * 100).toFixed(3)));
+                }
+
+                const teal = getVar('--cae-teal');
+                const amber = getVar('--cae-amber');
+                const textMuted = getVar('--cae-muted');
+                const gridCol = getVar('--cae-grid');
+
+                const lslIndex = xs.indexOf('+0');
+                const uslIndex = xs.indexOf('+50');
+
+                if (cpkChart) cpkChart.destroy();
+                cpkChart = new Chart(cpkCtx, {
+                    type: 'line',
+                    data: {
+                        labels: xs,
+                        datasets: [
+                            {
+                                label: 'Condição Inicial (Cpk -0,66 | σ=9μm)',
+                                data: beforePts,
+                                borderColor: amber,
+                                backgroundColor: 'rgba(245, 158, 11, 0.12)',
+                                borderDash: [5, 5],
+                                borderWidth: 2,
+                                pointRadius: 0,
+                                fill: true,
+                                tension: 0.35
+                            },
+                            {
+                                label: 'Distribuição Simulada / Atual',
+                                data: livePts,
+                                borderColor: teal,
+                                backgroundColor: 'rgba(20, 184, 166, 0.16)',
+                                borderWidth: 2.5,
+                                pointRadius: 0,
+                                fill: true,
+                                tension: 0.35
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        interaction: { mode: 'index', intersect: false },
+                        plugins: {
+                            legend: {
+                                labels: { color: getVar('--cae-text'), font: { family: '"JetBrains Mono"', size: 11 } }
+                            },
+                            tooltip: {
+                                callbacks: {
+                                    title: (items) => `Desvio vs. LIE: ${items[0].label} μm (Janela: 0 a +50 μm)`
+                                }
+                            }
+                        },
+                        scales: {
+                            x: {
+                                title: { display: true, text: 'Desvio Dimensional Normalizado em μm (LIE = 0 | LSE = +50)', color: textMuted, font: { family: '"JetBrains Mono"', size: 10 } },
+                                ticks: {
+                                    color: (ctx) => (ctx.index === lslIndex || ctx.index === uslIndex) ? amber : textMuted,
+                                    font: { family: '"JetBrains Mono"', size: 10 },
+                                    maxTicksLimit: 13
+                                },
+                                grid: {
+                                    color: (ctx) => (ctx.index === lslIndex || ctx.index === uslIndex) ? amber : gridCol
+                                }
+                            },
+                            y: {
+                                title: { display: true, text: 'Densidade Relativa (%)', color: textMuted, font: { family: '"JetBrains Mono"', size: 10 } },
+                                ticks: { color: textMuted, font: { family: '"JetBrains Mono"', size: 10 } },
+                                grid: { color: gridCol }
+                            }
+                        }
+                    }
+                });
+            }
+
+            offsetSlider.addEventListener('input', updateCpkSimulation);
+            sigmaSlider.addEventListener('input', updateCpkSimulation);
+            document.getElementById('presetBefore').addEventListener('click', () => {
+                offsetSlider.value = -18;
+                sigmaSlider.value = 9;
+                updateCpkSimulation();
+            });
+            document.getElementById('presetAfter').addEventListener('click', () => {
+                offsetSlider.value = 20;
+                sigmaSlider.value = 7;
+                updateCpkSimulation();
+            });
+
+            // =================================================================
+            // PAINEL 2: ISHIKAWA 6M & HORA-A-HORA
+            // =================================================================
+            const ishikawaData = [
+                {
+                    title: '1. Materiais — Causas Mapeadas',
+                    items: [
+                        'Liga inadequada ou baixa condutividade térmica/mecânica do eletrodo',
+                        'Material da peça base com elevada abrasividade superficial',
+                        'Contaminação por óleos, óxidos ou carepa na zona de contato',
+                        'Variação na espessura ou tipo de revestimento superficial'
+                    ],
+                    action: 'Padronizar especificação de liga de cobre-cromo-zircônio (CuCrZr) para o eletrodo e validar limpeza/revestimento no recebimento.'
+                },
+                {
+                    title: '2. Máquina — Causas Mapeadas',
+                    items: [
+                        'Parâmetros de soldagem fora da janela (corrente, tempo e pressão)',
+                        'Deficiência de vazão/temperatura no circuito de refrigeração da pinça',
+                        'Instabilidade na regulagem da força de fechamento',
+                        'Folgas mecânicas e desgaste excessivo dos componentes da pinça'
+                    ],
+                    action: 'Auditar vazão de água gelada, calibrar transdutor de força de fechamento e travar receita de corrente/tempo no CLP.'
+                },
+                {
+                    title: '3. Método — Causas Mapeadas',
+                    items: [
+                        'Frequência reativa (e não preventiva) de troca/dressagem do eletrodo',
+                        'Técnicas e sequenciamento de soldagem inconsistentes entre turnos',
+                        'Tempo de ciclo comprimido causando superaquecimento da ponta',
+                        'Geometria do eletrodo pouco adaptada ao acesso da junta'
+                    ],
+                    action: 'Definir intervalo fixo de dressagem/troca preventiva antes da degradação crítica e revisar tempo de resfriamento (hold time).'
+                },
+                {
+                    title: '4. Mão de Obra — Causas Mapeadas',
+                    items: [
+                        'Critérios heterogêneos de setup entre operadores',
+                        'Ajustes manuais frequentes de parâmetros para compensar desgaste',
+                        'Manuseio e alinhamento inadequados durante a substituição do eletrodo',
+                        'Falta de inspeção visual periódica da face de contato'
+                    ],
+                    action: 'Treinar equipe com padrão visual de desgaste limite (poka-yoke dimensional) e restringir alterações manuais de corrente.'
+                },
+                {
+                    title: '5. Meio Ambiente — Causas Mapeadas',
+                    items: [
+                        'Umidade excessiva no posto favorecendo oxidação e centelhamento',
+                        'Acúmulo de poeira e respingos metálicos na área de trabalho',
+                        'Variações térmicas entre horários afetando eletrodo e transformador'
+                    ],
+                    action: 'Implementar rotina 5S de limpeza por turno no conjunto pinça/guia e monitorar temperatura do chiller.'
+                },
+                {
+                    title: '6. Medidas — Causas Mapeadas',
+                    items: [
+                        'Monitoramento ineficiente do desgaste acumulado por número de pontos',
+                        'Ausência de registro automatizado de corrente real vs. nominal',
+                        'Baixa frequência de inspeção visual e teste destrutivo/arrancamento'
+                    ],
+                    action: 'Ativar contador de pontos de solda no controlador com alerta preventivo e auditoria horária de aderência.'
+                }
+            ];
+
+            const mBtns = document.querySelectorAll('.m-btn');
+            const mTitle = document.getElementById('mTitle');
+            const mList = document.getElementById('mList');
+            const mAction = document.getElementById('mAction');
+
+            function selectIshikawa(idx) {
+                const d = ishikawaData[idx];
+                mBtns.forEach((b, i) => {
+                    const active = i === idx;
+                    b.classList.toggle('active', active);
+                    b.setAttribute('aria-selected', String(active));
+                });
+                mTitle.textContent = d.title;
+                mList.innerHTML = d.items.map(it => `<li>${it}</li>`).join('');
+                mAction.textContent = d.action;
+            }
+            mBtns.forEach(btn => btn.addEventListener('click', () => selectIshikawa(parseInt(btn.dataset.m, 10))));
+            selectIshikawa(0);
+
+            // HOURLY CHART DATA (from normalized shift schedule 07h-17h, lunch 11h-12h = target 60)
+            const hours = ['07h–08h', '08h–09h', '09h–10h', '10h–11h', '11h–12h*', '12h–13h', '13h–14h', '14h–15h', '15h–16h', '16h–17h'];
+            const targetHourly = [100, 120, 120, 120, 60, 120, 120, 120, 120, 100];
+            const stableHourly = [100, 120, 120, 112, 60, 120, 120, 120, 115, 100];
+            const unstableHourly = [80, 100, 100, 100, 40, 100, 100, 100, 90, 90];
+
+            // Cumulative delta
+            function cumDelta(arr) {
+                let acc = 0;
+                return arr.map((v, i) => { acc += (v - targetHourly[i]); return acc; });
+            }
+
+            let hourlyMode = 'compare'; // 'compare' | 'loss'
+            let hourlyChart = null;
+            const hourlyCtx = document.getElementById('hourlyChart').getContext('2d');
+            const modeCompareBtn = document.getElementById('modeCompareBtn');
+            const modeLossBtn = document.getElementById('modeLossBtn');
+
+            function renderHourlyChart() {
+                const teal = getVar('--cae-teal');
+                const amber = getVar('--cae-amber');
+                const textMuted = getVar('--cae-muted');
+                const textMain = getVar('--cae-text');
+                const gridCol = getVar('--cae-grid');
+
+                const isCompare = hourlyMode === 'compare';
+                if (hourlyChart) hourlyChart.destroy();
+
+                hourlyChart = new Chart(hourlyCtx, {
+                    type: isCompare ? 'bar' : 'line',
+                    data: isCompare ? {
+                        labels: hours,
+                        datasets: [
+                            { label: 'Programação (Meta)', data: targetHourly, backgroundColor: 'rgba(148, 163, 184, 0.25)', borderColor: textMuted, borderWidth: 1.5 },
+                            { label: 'Condição Estabilizada (1.087 un)', data: stableHourly, backgroundColor: teal, borderRadius: 4 },
+                            { label: 'Condição Crônica (900 un)', data: unstableHourly, backgroundColor: amber, borderRadius: 4 }
+                        ]
+                    } : {
+                        labels: hours,
+                        datasets: [
+                            { label: 'Saldo Acumulado — Estabilizada (-13 un)', data: cumDelta(stableHourly), borderColor: teal, backgroundColor: 'rgba(20, 184, 166, 0.16)', fill: true, tension: 0.25, borderWidth: 2.5 },
+                            { label: 'Saldo Acumulado — Crônica (-200 un)', data: cumDelta(unstableHourly), borderColor: amber, backgroundColor: 'rgba(245, 158, 11, 0.14)', fill: true, tension: 0.25, borderWidth: 2.5 }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        interaction: { mode: 'index', intersect: false },
+                        plugins: {
+                            legend: { labels: { color: textMain, font: { family: '"JetBrains Mono"', size: 11 } } }
+                        },
+                        scales: {
+                            x: { ticks: { color: textMuted, font: { family: '"JetBrains Mono"', size: 10 } }, grid: { color: gridCol } },
+                            y: {
+                                title: { display: true, text: isCompare ? 'Peças / Hora' : 'Saldo Acumulado vs. Meta (un)', color: textMuted, font: { family: '"JetBrains Mono"', size: 10 } },
+                                ticks: { color: textMuted, font: { family: '"JetBrains Mono"', size: 10 } },
+                                grid: { color: gridCol }
+                            }
+                        }
+                    }
+                });
+            }
+
+            modeCompareBtn.addEventListener('click', () => {
+                hourlyMode = 'compare';
+                modeCompareBtn.classList.add('border-cae-teal/50', 'bg-cae-teal/15', 'text-cae-teal');
+                modeLossBtn.classList.remove('border-cae-amber/50', 'bg-cae-amber/15', 'text-cae-amber');
+                renderHourlyChart();
+            });
+            modeLossBtn.addEventListener('click', () => {
+                hourlyMode = 'loss';
+                modeLossBtn.classList.add('border-cae-amber/50', 'bg-cae-amber/15', 'text-cae-amber');
+                modeCompareBtn.classList.remove('border-cae-teal/50', 'bg-cae-teal/15', 'text-cae-teal');
+                renderHourlyChart();
+            });
+
+            // Boot
+            applyTheme(currentTheme);
+            renderHourlyChart();
+        })();
+    </script>
+</body>
+</html>

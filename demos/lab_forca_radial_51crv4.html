@@ -1,0 +1,562 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Laboratório Digital — Força Radial 51CrV4 | Rafael Vivian</title>
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        cae: {
+                            bg: 'var(--cae-bg)',
+                            surface: 'var(--cae-surface)',
+                            text: 'var(--cae-text)',
+                            muted: 'var(--cae-muted)',
+                            teal: 'var(--cae-teal)',
+                            teal_hover: 'var(--cae-teal-hover)',
+                            amber: 'var(--cae-amber)',
+                            border: 'var(--cae-border)'
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['"Plus Jakarta Sans"', 'sans-serif'],
+                        mono: ['"JetBrains Mono"', 'monospace']
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        :root,
+        [data-theme="dark"] {
+            --cae-bg: #090E17;
+            --cae-surface: #131E31;
+            --cae-panel-bg: rgba(19, 30, 49, 0.72);
+            --cae-text: #F1F5F9;
+            --cae-muted: #94A3B8;
+            --cae-primary: #14B8A6;
+            --cae-teal: #14B8A6;
+            --cae-teal-hover: #2DD4BF;
+            --cae-amber: #F59E0B;
+            --cae-border: rgba(241, 245, 249, 0.12);
+            --cae-track: rgba(241, 245, 249, 0.1);
+            --cae-grid: rgba(241, 245, 249, 0.08);
+            --cae-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.35);
+            --cae-slider-grad-start: #0F3D5E;
+            --cae-slider-grad-end: #14B8A6;
+        }
+
+        [data-theme="light"] {
+            --cae-bg: #F6F7F9;
+            --cae-surface: #FFFFFF;
+            --cae-panel-bg: rgba(255, 255, 255, 0.92);
+            --cae-text: #0F172A;
+            --cae-muted: #64748B;
+            --cae-primary: #0F3D5E;
+            --cae-teal: #0D9488;
+            --cae-teal-hover: #15527C;
+            --cae-amber: #D97706;
+            --cae-border: rgba(15, 23, 42, 0.14);
+            --cae-track: rgba(15, 23, 42, 0.12);
+            --cae-grid: rgba(15, 23, 42, 0.10);
+            --cae-shadow: 0 12px 32px -8px rgba(15, 23, 42, 0.09);
+            --cae-slider-grad-start: #0F3D5E;
+            --cae-slider-grad-end: #0D9488;
+        }
+
+        body {
+            background-color: var(--cae-bg);
+            color: var(--cae-text);
+            background-image: radial-gradient(circle at top right, rgba(20, 184, 166, 0.06), transparent 40%),
+                              radial-gradient(circle at bottom left, rgba(245, 158, 11, 0.04), transparent 40%);
+            overflow-x: hidden;
+            transition: background-color 0.25s ease, color 0.25s ease;
+        }
+
+        .glass-panel {
+            background: var(--cae-panel-bg);
+            backdrop-filter: blur(12px);
+            border: 1px solid var(--cae-border);
+            box-shadow: var(--cae-shadow);
+            border-radius: 16px;
+        }
+
+        .hmi-slider-container { position: relative; padding: 6px 0; }
+        input[type=range] {
+            -webkit-appearance: none; width: 100%; background: transparent; position: relative; z-index: 5;
+        }
+        input[type=range]:focus { outline: none; }
+        input[type=range]:focus-visible::-webkit-slider-thumb {
+            box-shadow: 0 0 0 3px var(--cae-surface), 0 0 0 6px var(--cae-amber);
+        }
+        input[type=range]::-webkit-slider-runnable-track {
+            width: 100%; height: 6px; cursor: pointer; background: var(--cae-track); border-radius: 3px;
+        }
+        input[type=range]::-webkit-slider-thumb {
+            height: 20px; width: 20px; border-radius: 50%; background: var(--cae-surface); cursor: pointer;
+            -webkit-appearance: none; margin-top: -7px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.35), 0 0 0 3px var(--cae-surface), 0 0 0 5px var(--cae-teal);
+            transition: transform 0.2s ease;
+        }
+        input[type=range]::-webkit-slider-thumb:hover {
+            transform: scale(1.18);
+        }
+        .slider-fill {
+            position: absolute; top: 12px; left: 0; height: 6px;
+            background: linear-gradient(90deg, var(--cae-slider-grad-start), var(--cae-slider-grad-end));
+            border-radius: 3px; pointer-events: none; transition: width 0.08s linear;
+        }
+    </style>
+</head>
+<body class="min-h-screen p-3 md:p-4 flex flex-col font-sans">
+
+    <!-- HEADER -->
+    <header class="glass-panel px-5 py-2.5 mb-3.5 flex flex-wrap justify-between items-center gap-3">
+        <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-lg bg-cae-surface border border-cae-border flex items-center justify-center shadow-lg relative overflow-hidden">
+                <div class="absolute inset-0 bg-cae-teal/20"></div>
+                <svg class="w-5 h-5 text-cae-teal relative z-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <circle cx="12" cy="12" r="9" stroke-width="2"></circle>
+                    <circle cx="12" cy="12" r="4" stroke-width="2"></circle>
+                    <line x1="12" y1="3" x2="12" y2="21" stroke-width="1.5"></line>
+                    <line x1="3" y1="12" x2="21" y2="12" stroke-width="1.5"></line>
+                </svg>
+            </div>
+            <div>
+                <h1 class="text-lg md:text-xl font-extrabold text-cae-text tracking-tight uppercase">Laboratório Digital — Força Radial 51CrV4</h1>
+                <p class="text-cae-teal font-mono text-[11px] md:text-xs mt-0.5 uppercase tracking-widest">Série Harmônica Polar • Abraçadeiras Aço Mola &amp; Ensaios 60°C</p>
+            </div>
+        </div>
+        <div class="flex items-center gap-3">
+            <a href="../index.html#cases" class="px-2.5 py-1 rounded-lg bg-cae-surface border border-cae-border text-xs font-mono font-bold text-cae-text hover:border-cae-teal transition">
+                ← Portfólio
+            </a>
+            <button type="button" id="themeToggle" aria-label="Alternar tema claro/escuro" class="px-2.5 py-1 rounded-lg bg-cae-surface border border-cae-border text-xs font-mono font-bold text-cae-teal hover:border-cae-teal transition">
+                Tema: Escuro
+            </button>
+        </div>
+    </header>
+
+    <!-- GRID PRINCIPAL -->
+    <main class="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-3.5">
+
+        <!-- LINHA SUPERIOR: EQUAÇÃO/INDICADORES (4 Colunas) + CONTROLES HARMÔNICOS (8 Colunas) -->
+        <section class="lg:col-span-5 flex flex-col gap-3">
+            <div class="glass-panel p-4 flex flex-col justify-between h-full">
+                <div>
+                    <div class="flex items-center justify-between gap-2 mb-2">
+                        <span class="text-[11px] font-mono font-bold text-cae-amber uppercase tracking-wider">Função Harmônica Polar</span>
+                        <span class="text-[10px] font-mono text-cae-muted bg-cae-bg border border-cae-border px-2 py-0.5 rounded">Aço 51CrV4 • Estufa 60°C</span>
+                    </div>
+                    <div class="bg-cae-bg border border-cae-border rounded-xl px-3.5 py-2.5 font-mono text-xs md:text-sm text-cae-teal font-bold mb-3 overflow-x-auto">
+                        F₁(θ) = <span id="eqText">255.75 + 1.00·cos(θ) + 37.50·sen(θ) + 13.25·cos(2θ)</span>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-2 gap-2.5">
+                    <div class="bg-cae-bg/80 border border-cae-border rounded-xl px-3 py-2">
+                        <span class="block text-[10px] text-cae-muted uppercase font-bold">F_máx (Pico)</span>
+                        <span class="text-lg font-mono font-extrabold text-cae-teal" id="statMax">283.0 N</span>
+                    </div>
+                    <div class="bg-cae-bg/80 border border-cae-border rounded-xl px-3 py-2">
+                        <span class="block text-[10px] text-cae-muted uppercase font-bold">F_mín (Vale)</span>
+                        <span class="text-lg font-mono font-extrabold text-cae-amber" id="statMin">205.0 N</span>
+                    </div>
+                    <div class="bg-cae-bg/80 border border-cae-border rounded-xl px-3 py-2">
+                        <span class="block text-[10px] text-cae-muted uppercase font-bold">Amplitude ΔF</span>
+                        <span class="text-lg font-mono font-extrabold text-cae-text" id="statDelta">78.0 N</span>
+                    </div>
+                    <div class="bg-cae-bg/80 border border-cae-border rounded-xl px-3 py-2">
+                        <span class="block text-[10px] text-cae-muted uppercase font-bold">Ângulo de Pico θ</span>
+                        <span class="text-lg font-mono font-extrabold text-cae-text" id="statAngle">44°</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="lg:col-span-7 flex flex-col">
+            <div class="glass-panel p-4 flex flex-col justify-between h-full gap-3">
+                <div class="flex flex-wrap items-center justify-between gap-2">
+                    <h2 class="text-xs font-bold text-cae-muted uppercase tracking-widest">Parâmetros da Série Harmônica</h2>
+                    <button type="button" id="resetBtn" class="px-2.5 py-1 rounded-lg bg-cae-bg border border-cae-border text-[11px] font-mono font-bold text-cae-teal hover:border-cae-teal transition">
+                        Restaurar Nominal (51CrV4)
+                    </button>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2.5">
+                    <div>
+                        <div class="flex justify-between items-end mb-1">
+                            <label for="paramA0" class="text-xs font-bold text-cae-text uppercase">Força Média Radial (A₀)</label>
+                            <span id="valA0" class="font-mono text-cae-teal text-xs font-bold">255.75 N</span>
+                        </div>
+                        <div class="hmi-slider-container">
+                            <div class="slider-fill" id="fillA0" style="width: 53%;"></div>
+                            <input type="range" id="paramA0" min="150" max="350" step="0.25" value="255.75">
+                        </div>
+                    </div>
+
+                    <div>
+                        <div class="flex justify-between items-end mb-1">
+                            <label for="paramA1" class="text-xs font-bold text-cae-text uppercase">1º Harmônico Cosseno (A₁)</label>
+                            <span id="valA1" class="font-mono text-cae-teal text-xs font-bold">1.00 N</span>
+                        </div>
+                        <div class="hmi-slider-container">
+                            <div class="slider-fill" id="fillA1" style="width: 51%;"></div>
+                            <input type="range" id="paramA1" min="-50" max="50" step="0.5" value="1.0">
+                        </div>
+                    </div>
+
+                    <div>
+                        <div class="flex justify-between items-end mb-1">
+                            <label for="paramB1" class="text-xs font-bold text-cae-text uppercase">Componente Seno (B₁)</label>
+                            <span id="valB1" class="font-mono text-cae-teal text-xs font-bold">37.50 N</span>
+                        </div>
+                        <div class="hmi-slider-container">
+                            <div class="slider-fill" id="fillB1" style="width: 73%;"></div>
+                            <input type="range" id="paramB1" min="-80" max="80" step="0.5" value="37.5">
+                        </div>
+                    </div>
+
+                    <div>
+                        <div class="flex justify-between items-end mb-1">
+                            <label for="paramA2" class="text-xs font-bold text-cae-text uppercase">2º Harmônico / Ovalização (A₂)</label>
+                            <span id="valA2" class="font-mono text-cae-teal text-xs font-bold">13.25 N</span>
+                        </div>
+                        <div class="hmi-slider-container">
+                            <div class="slider-fill" id="fillA2" style="width: 61%;"></div>
+                            <input type="range" id="paramA2" min="-60" max="60" step="0.25" value="13.25">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="text-[11px] text-cae-muted border-t border-cae-border pt-2 flex flex-wrap justify-between gap-2">
+                    <span>Referência teórica: Equações de Lamé • Contato de Hertz • Lei de Hooke</span>
+                    <span class="font-mono text-cae-amber">Validação FEA: ANSYS • Abaqus • SolidWorks</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- LINHA INFERIOR: GRÁFICO POLAR (5 Colunas) + CURVA ANGULAR DESENVOLVIDA 0°-360° (7 Colunas) -->
+        <section class="lg:col-span-5">
+            <div class="glass-panel p-4 h-full min-h-[300px] flex flex-col">
+                <div class="flex justify-between items-center gap-2 mb-2">
+                    <h2 class="text-xs font-bold text-cae-text uppercase tracking-widest">Distribuição Polar F₁(θ)</h2>
+                    <span class="text-[10px] font-mono text-cae-muted bg-cae-bg border border-cae-border px-2 py-0.5 rounded">0° – 360° HiDPI</span>
+                </div>
+                <div class="relative flex-1 w-full min-h-[245px] flex items-center justify-center">
+                    <canvas id="polarCanvas" width="380" height="300" aria-label="Gráfico Polar da Força Radial"></canvas>
+                </div>
+            </div>
+        </section>
+
+        <section class="lg:col-span-7">
+            <div class="glass-panel p-4 h-full min-h-[300px] flex flex-col">
+                <div class="flex justify-between items-center gap-2 mb-2">
+                    <h2 class="text-xs font-bold text-cae-text uppercase tracking-widest">Perfil Angular Desenvolvido F₁(θ) × θ</h2>
+                    <span class="text-[10px] font-mono text-cae-teal bg-cae-bg border border-cae-border px-2 py-0.5 rounded">Hover interativo por ângulo</span>
+                </div>
+                <div class="relative flex-1 w-full min-h-[245px]">
+                    <canvas id="angularChart"></canvas>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <script>
+        const htmlEl = document.documentElement;
+        const themeToggleBtn = document.getElementById('themeToggle');
+        let currentTheme = localStorage.getItem('rv_theme') || 'dark';
+        htmlEl.setAttribute('data-theme', currentTheme);
+
+        function getThemeColors() {
+            const s = getComputedStyle(htmlEl);
+            return {
+                bg: s.getPropertyValue('--cae-bg').trim(),
+                surface: s.getPropertyValue('--cae-surface').trim(),
+                text: s.getPropertyValue('--cae-text').trim(),
+                muted: s.getPropertyValue('--cae-muted').trim(),
+                primary: s.getPropertyValue('--cae-primary').trim(),
+                teal: s.getPropertyValue('--cae-teal').trim(),
+                amber: s.getPropertyValue('--cae-amber').trim(),
+                grid: s.getPropertyValue('--cae-grid').trim(),
+                border: s.getPropertyValue('--cae-border').trim()
+            };
+        }
+
+        function updateThemeLabel() {
+            themeToggleBtn.textContent = currentTheme === 'dark' ? 'Tema: Escuro' : 'Tema: Claro';
+        }
+        updateThemeLabel();
+
+        const paramA0 = document.getElementById('paramA0');
+        const paramA1 = document.getElementById('paramA1');
+        const paramB1 = document.getElementById('paramB1');
+        const paramA2 = document.getElementById('paramA2');
+
+        let angularChart = null;
+
+        function computeProfile(A0, A1, B1, A2) {
+            const points = [];
+            let maxF = -Infinity, minF = Infinity, maxDeg = 0;
+
+            for (let deg = 0; deg <= 360; deg += 5) {
+                const rad = (deg * Math.PI) / 180;
+                const f = A0 + A1 * Math.cos(rad) + B1 * Math.sin(rad) + A2 * Math.cos(2 * rad);
+                points.push({ deg, rad, f: Math.max(0, f) });
+                if (deg < 360) {
+                    if (f > maxF) { maxF = f; maxDeg = deg; }
+                    if (f < minF) minF = f;
+                }
+            }
+            return { points, maxF, minF, delta: maxF - minF, maxDeg };
+        }
+
+        function drawPolar(data, A0) {
+            const canvas = document.getElementById('polarCanvas');
+            const ctx = canvas.getContext('2d');
+            const parent = canvas.parentElement;
+            const size = Math.min(parent.clientWidth || 340, 290);
+            const dpr = window.devicePixelRatio || 1;
+
+            canvas.width = size * dpr;
+            canvas.height = size * dpr;
+            canvas.style.width = `${size}px`;
+            canvas.style.height = `${size}px`;
+            ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+            const cx = size / 2;
+            const cy = size / 2;
+            const maxR = (size / 2) - 28;
+            const scaleMax = Math.max(380, data.maxF * 1.12);
+            const theme = getThemeColors();
+
+            ctx.clearRect(0, 0, size, size);
+
+            // Anéis de referência
+            [100, 200, 300, 380].forEach((val) => {
+                if (val > scaleMax) return;
+                const r = (val / scaleMax) * maxR;
+                ctx.beginPath();
+                ctx.arc(cx, cy, r, 0, Math.PI * 2);
+                ctx.strokeStyle = theme.grid;
+                ctx.lineWidth = 1;
+                ctx.stroke();
+
+                ctx.fillStyle = theme.muted;
+                ctx.font = '600 9px "JetBrains Mono", monospace';
+                ctx.fillText(`${val}N`, cx + 4, cy - r + 10);
+            });
+
+            // Eixos angulares
+            for (let deg = 0; deg < 360; deg += 45) {
+                const rad = (deg * Math.PI) / 180;
+                ctx.beginPath();
+                ctx.moveTo(cx, cy);
+                ctx.lineTo(cx + Math.cos(rad) * maxR, cy - Math.sin(rad) * maxR);
+                ctx.strokeStyle = theme.grid;
+                ctx.stroke();
+
+                const lx = cx + Math.cos(rad) * (maxR + 14);
+                const ly = cy - Math.sin(rad) * (maxR + 14);
+                ctx.fillStyle = theme.muted;
+                ctx.font = '600 10px "JetBrains Mono", monospace';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(`${deg}°`, lx, ly);
+            }
+
+            // Círculo nominal A0
+            const rA0 = (A0 / scaleMax) * maxR;
+            ctx.beginPath();
+            ctx.setLineDash([4, 4]);
+            ctx.arc(cx, cy, rA0, 0, Math.PI * 2);
+            ctx.strokeStyle = theme.amber;
+            ctx.lineWidth = 1.5;
+            ctx.stroke();
+            ctx.setLineDash([]);
+
+            // Curva polar F1(theta)
+            ctx.beginPath();
+            data.points.forEach((pt, idx) => {
+                const r = (pt.f / scaleMax) * maxR;
+                const x = cx + Math.cos(pt.rad) * r;
+                const y = cy - Math.sin(pt.rad) * r;
+                if (idx === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+            });
+            ctx.closePath();
+            ctx.fillStyle = 'rgba(20, 184, 166, 0.16)';
+            ctx.fill();
+            ctx.strokeStyle = theme.teal;
+            ctx.lineWidth = 2.5;
+            ctx.stroke();
+
+            // Ponto de pico F_max
+            const maxRad = (data.maxDeg * Math.PI) / 180;
+            const rMax = (data.maxF / scaleMax) * maxR;
+            ctx.beginPath();
+            ctx.arc(cx + Math.cos(maxRad) * rMax, cy - Math.sin(maxRad) * rMax, 4.5, 0, Math.PI * 2);
+            ctx.fillStyle = theme.amber;
+            ctx.fill();
+        }
+
+        function initAngularChart() {
+            const ctx = document.getElementById('angularChart').getContext('2d');
+            const theme = getThemeColors();
+            angularChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [
+                        {
+                            label: 'Força Radial F₁(θ)',
+                            data: [],
+                            borderColor: theme.teal,
+                            backgroundColor: 'rgba(20, 184, 166, 0.14)',
+                            borderWidth: 2.5,
+                            pointRadius: 0,
+                            pointHoverRadius: 5,
+                            fill: true,
+                            tension: 0.3
+                        },
+                        {
+                            label: 'Média Nominal (A₀)',
+                            data: [],
+                            borderColor: theme.amber,
+                            borderWidth: 1.5,
+                            borderDash: [5, 5],
+                            pointRadius: 0,
+                            fill: false
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: { mode: 'index', intersect: false },
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            backgroundColor: theme.surface,
+                            titleColor: theme.text,
+                            bodyColor: theme.text,
+                            borderColor: theme.border,
+                            borderWidth: 1,
+                            callbacks: {
+                                title: (items) => `Ângulo θ = ${items[0].label}`,
+                                label: (item) => `${item.dataset.label}: ${Number(item.parsed.y).toFixed(1)} N`
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            grid: { color: theme.grid, drawBorder: false },
+                            ticks: { maxTicksLimit: 9, color: theme.muted, font: { family: 'JetBrains Mono', size: 10 } }
+                        },
+                        y: {
+                            min: 50,
+                            max: 420,
+                            grid: { color: theme.grid, drawBorder: false },
+                            ticks: {
+                                color: theme.muted,
+                                font: { family: 'JetBrains Mono', size: 10 },
+                                callback: (v) => `${v} N`
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        function updateSliderFill(input, fillId) {
+            const min = parseFloat(input.min);
+            const max = parseFloat(input.max);
+            const val = parseFloat(input.value);
+            const pct = ((val - min) / (max - min)) * 100;
+            document.getElementById(fillId).style.width = `${pct}%`;
+        }
+
+        function updateAll() {
+            const A0 = parseFloat(paramA0.value);
+            const A1 = parseFloat(paramA1.value);
+            const B1 = parseFloat(paramB1.value);
+            const A2 = parseFloat(paramA2.value);
+
+            updateSliderFill(paramA0, 'fillA0');
+            updateSliderFill(paramA1, 'fillA1');
+            updateSliderFill(paramB1, 'fillB1');
+            updateSliderFill(paramA2, 'fillA2');
+
+            document.getElementById('valA0').textContent = `${A0.toFixed(2)} N`;
+            document.getElementById('valA1').textContent = `${A1.toFixed(2)} N`;
+            document.getElementById('valB1').textContent = `${B1.toFixed(2)} N`;
+            document.getElementById('valA2').textContent = `${A2.toFixed(2)} N`;
+
+            const sA1 = A1 >= 0 ? `+ ${A1.toFixed(2)}` : `- ${Math.abs(A1).toFixed(2)}`;
+            const sB1 = B1 >= 0 ? `+ ${B1.toFixed(2)}` : `- ${Math.abs(B1).toFixed(2)}`;
+            const sA2 = A2 >= 0 ? `+ ${A2.toFixed(2)}` : `- ${Math.abs(A2).toFixed(2)}`;
+            document.getElementById('eqText').textContent = `${A0.toFixed(2)} ${sA1}·cos(θ) ${sB1}·sen(θ) ${sA2}·cos(2θ)`;
+
+            const data = computeProfile(A0, A1, B1, A2);
+            document.getElementById('statMax').textContent = `${data.maxF.toFixed(1)} N`;
+            document.getElementById('statMin').textContent = `${data.minF.toFixed(1)} N`;
+            document.getElementById('statDelta').textContent = `${data.delta.toFixed(1)} N`;
+            document.getElementById('statAngle').textContent = `${data.maxDeg}°`;
+
+            drawPolar(data, A0);
+
+            if (angularChart) {
+                const theme = getThemeColors();
+                angularChart.data.labels = data.points.map((p) => `${p.deg}°`);
+                angularChart.data.datasets[0].data = data.points.map((p) => p.f);
+                angularChart.data.datasets[0].borderColor = theme.teal;
+                angularChart.data.datasets[1].data = data.points.map(() => A0);
+                angularChart.data.datasets[1].borderColor = theme.amber;
+                angularChart.options.plugins.tooltip.backgroundColor = theme.surface;
+                angularChart.options.plugins.tooltip.titleColor = theme.text;
+                angularChart.options.plugins.tooltip.bodyColor = theme.text;
+                angularChart.options.plugins.tooltip.borderColor = theme.border;
+                angularChart.options.scales.x.grid.color = theme.grid;
+                angularChart.options.scales.x.ticks.color = theme.muted;
+                angularChart.options.scales.y.grid.color = theme.grid;
+                angularChart.options.scales.y.ticks.color = theme.muted;
+                angularChart.update('none');
+            }
+        }
+
+        [paramA0, paramA1, paramB1, paramA2].forEach((el) => el.addEventListener('input', updateAll));
+
+        document.getElementById('resetBtn').addEventListener('click', () => {
+            paramA0.value = 255.75;
+            paramA1.value = 1.0;
+            paramB1.value = 37.5;
+            paramA2.value = 13.25;
+            updateAll();
+        });
+
+        themeToggleBtn.addEventListener('click', () => {
+            currentTheme = currentTheme === 'dark' ? 'light' : 'dark';
+            htmlEl.setAttribute('data-theme', currentTheme);
+            localStorage.setItem('rv_theme', currentTheme);
+            updateThemeLabel();
+            updateAll();
+        });
+
+        window.addEventListener('resize', updateAll);
+        window.onload = () => {
+            initAngularChart();
+            updateAll();
+        };
+    </script>
+</body>
+</html>
