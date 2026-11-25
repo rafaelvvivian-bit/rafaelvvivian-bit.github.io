@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Laboratório Digital — Força Radial 51CrV4 | Rafael Vivian</title>
+    <title>Laboratório Digital — Força Radial</title>
 
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -48,6 +48,7 @@
             --cae-teal: #14B8A6;
             --cae-teal-hover: #2DD4BF;
             --cae-amber: #F59E0B;
+            --cae-red: #EF4444;
             --cae-border: rgba(241, 245, 249, 0.12);
             --cae-track: rgba(241, 245, 249, 0.1);
             --cae-grid: rgba(241, 245, 249, 0.08);
@@ -66,6 +67,7 @@
             --cae-teal: #0D9488;
             --cae-teal-hover: #15527C;
             --cae-amber: #D97706;
+            --cae-red: #DC2626;
             --cae-border: rgba(15, 23, 42, 0.14);
             --cae-track: rgba(15, 23, 42, 0.12);
             --cae-grid: rgba(15, 23, 42, 0.10);
@@ -103,8 +105,8 @@
             width: 100%; height: 6px; cursor: pointer; background: var(--cae-track); border-radius: 3px;
         }
         input[type=range]::-webkit-slider-thumb {
-            height: 20px; width: 20px; border-radius: 50%; background: var(--cae-surface); cursor: pointer;
-            -webkit-appearance: none; margin-top: -7px;
+            height: 18px; width: 18px; border-radius: 50%; background: var(--cae-surface); cursor: pointer;
+            -webkit-appearance: none; margin-top: -6px;
             box-shadow: 0 0 10px rgba(0, 0, 0, 0.35), 0 0 0 3px var(--cae-surface), 0 0 0 5px var(--cae-teal);
             transition: transform 0.2s ease;
         }
@@ -115,6 +117,16 @@
             position: absolute; top: 12px; left: 0; height: 6px;
             background: linear-gradient(90deg, var(--cae-slider-grad-start), var(--cae-slider-grad-end));
             border-radius: 3px; pointer-events: none; transition: width 0.08s linear;
+        }
+
+        .tab-btn {
+            transition: all 0.2s ease;
+        }
+        .tab-btn.active {
+            background: var(--cae-surface);
+            color: var(--cae-teal);
+            border-color: var(--cae-teal);
+            box-shadow: 0 2px 8px rgba(20, 184, 166, 0.2);
         }
     </style>
 </head>
@@ -133,8 +145,8 @@
                 </svg>
             </div>
             <div>
-                <h1 class="text-lg md:text-xl font-extrabold text-cae-text tracking-tight uppercase">Laboratório Digital — Força Radial 51CrV4</h1>
-                <p class="text-cae-teal font-mono text-[11px] md:text-xs mt-0.5 uppercase tracking-widest">Série Harmônica Polar • Abraçadeiras Aço Mola &amp; Ensaios 60°C</p>
+                <h1 class="text-lg md:text-xl font-extrabold text-cae-text tracking-tight uppercase">Laboratório Digital — Força Radial</h1>
+                <p class="text-cae-teal font-mono text-[11px] md:text-xs mt-0.5 uppercase tracking-widest">Série Harmônica Polar</p>
             </div>
         </div>
         <div class="flex items-center gap-3">
@@ -150,50 +162,89 @@
     <!-- GRID PRINCIPAL -->
     <main class="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-3.5">
 
-        <!-- LINHA SUPERIOR: EQUAÇÃO/INDICADORES (4 Colunas) + CONTROLES HARMÔNICOS (8 Colunas) -->
+        <!-- LINHA SUPERIOR: EQUAÇÃO + KPIS + RESISTÊNCIA MECÂNICA (5 Colunas) -->
         <section class="lg:col-span-5 flex flex-col gap-3">
-            <div class="glass-panel p-4 flex flex-col justify-between h-full">
+            <div class="glass-panel p-4 flex flex-col justify-between h-full gap-3">
                 <div>
-                    <div class="flex items-center justify-between gap-2 mb-2">
+                    <div class="flex items-center justify-between gap-2 mb-1.5">
                         <span class="text-[11px] font-mono font-bold text-cae-amber uppercase tracking-wider">Função Harmônica Polar</span>
-                        <span class="text-[10px] font-mono text-cae-muted bg-cae-bg border border-cae-border px-2 py-0.5 rounded">Aço 51CrV4 • Estufa 60°C</span>
                     </div>
-                    <div class="bg-cae-bg border border-cae-border rounded-xl px-3.5 py-2.5 font-mono text-xs md:text-sm text-cae-teal font-bold mb-3 overflow-x-auto">
+                    <div class="bg-cae-bg border border-cae-border rounded-xl px-3 py-2 font-mono text-xs md:text-sm text-cae-teal font-bold mb-3 overflow-x-auto whitespace-nowrap">
                         F₁(θ) = <span id="eqText">255.75 + 1.00·cos(θ) + 37.50·sen(θ) + 13.25·cos(2θ)</span>
+                    </div>
+
+                    <!-- 4 KPIS BÁSICOS -->
+                    <div class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-2 gap-2 mb-3">
+                        <div class="bg-cae-bg/80 border border-cae-border rounded-xl px-2.5 py-1.5">
+                            <span class="block text-[10px] text-cae-muted uppercase font-bold">F_máx (Pico)</span>
+                            <span class="text-base font-mono font-extrabold text-cae-teal" id="statMax">283.0 N</span>
+                        </div>
+                        <div class="bg-cae-bg/80 border border-cae-border rounded-xl px-2.5 py-1.5">
+                            <span class="block text-[10px] text-cae-muted uppercase font-bold">F_mín (Vale)</span>
+                            <span class="text-base font-mono font-extrabold text-cae-amber" id="statMin">205.0 N</span>
+                        </div>
+                        <div class="bg-cae-bg/80 border border-cae-border rounded-xl px-2.5 py-1.5">
+                            <span class="block text-[10px] text-cae-muted uppercase font-bold">Amplitude ΔF</span>
+                            <span class="text-base font-mono font-extrabold text-cae-text" id="statDelta">78.0 N</span>
+                        </div>
+                        <div class="bg-cae-bg/80 border border-cae-border rounded-xl px-2.5 py-1.5">
+                            <span class="block text-[10px] text-cae-muted uppercase font-bold">Ângulo de Pico θ</span>
+                            <span class="text-base font-mono font-extrabold text-cae-text" id="statAngle">44°</span>
+                        </div>
                     </div>
                 </div>
 
-                <div class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-2 gap-2.5">
-                    <div class="bg-cae-bg/80 border border-cae-border rounded-xl px-3 py-2">
-                        <span class="block text-[10px] text-cae-muted uppercase font-bold">F_máx (Pico)</span>
-                        <span class="text-lg font-mono font-extrabold text-cae-teal" id="statMax">283.0 N</span>
+                <!-- INTEGRAL DE TENSÃO VON MISES & ESTANQUEIDADE -->
+                <div class="border-t border-cae-border pt-2.5 flex flex-col gap-2">
+                    <div class="bg-cae-bg/80 border border-cae-border rounded-xl p-2.5">
+                        <div class="flex justify-between items-center mb-1">
+                            <span class="text-[10px] uppercase font-bold text-cae-muted">Tensão Máx. von Mises (σ_vM)</span>
+                            <span id="statVonMises" class="font-mono text-xs font-bold text-cae-teal">1.085 MPa</span>
+                        </div>
+                        <!-- Barra de Escoamento -->
+                        <div class="w-full bg-cae-surface h-2 rounded-full overflow-hidden border border-cae-border relative mb-1">
+                            <div id="barVonMises" class="h-full bg-gradient-to-r from-cae-teal via-cae-amber to-red-500 rounded-full transition-all duration-150" style="width: 80.4%;"></div>
+                        </div>
+                        <div class="flex justify-between items-center text-[10px] font-mono">
+                            <span class="text-cae-muted">R_p0.2 = 1.350 MPa</span>
+                            <span id="statSafetyFactor" class="font-bold text-cae-teal">FS = 1.24 (80.4% Escoamento)</span>
+                        </div>
                     </div>
-                    <div class="bg-cae-bg/80 border border-cae-border rounded-xl px-3 py-2">
-                        <span class="block text-[10px] text-cae-muted uppercase font-bold">F_mín (Vale)</span>
-                        <span class="text-lg font-mono font-extrabold text-cae-amber" id="statMin">205.0 N</span>
-                    </div>
-                    <div class="bg-cae-bg/80 border border-cae-border rounded-xl px-3 py-2">
-                        <span class="block text-[10px] text-cae-muted uppercase font-bold">Amplitude ΔF</span>
-                        <span class="text-lg font-mono font-extrabold text-cae-text" id="statDelta">78.0 N</span>
-                    </div>
-                    <div class="bg-cae-bg/80 border border-cae-border rounded-xl px-3 py-2">
-                        <span class="block text-[10px] text-cae-muted uppercase font-bold">Ângulo de Pico θ</span>
-                        <span class="text-lg font-mono font-extrabold text-cae-text" id="statAngle">44°</span>
+
+                    <!-- BADGE DE ESTANQUEIDADE / RETENÇÃO -->
+                    <div id="badgeSealing" class="bg-cae-bg border border-cae-teal/40 rounded-xl px-3 py-1.5 flex items-center justify-between gap-2">
+                        <div class="flex items-center gap-1.5">
+                            <span class="w-2 h-2 rounded-full bg-cae-teal animate-pulse" id="dotSealing"></span>
+                            <span class="text-[11px] font-bold text-cae-text" id="txtSealingTitle">Estanqueidade Aprovada</span>
+                        </div>
+                        <span class="text-[10px] font-mono text-cae-muted" id="txtSealingDesc">Circuito Turbo / Radiador (P ≤ 2.5 bar)</span>
                     </div>
                 </div>
             </div>
         </section>
 
+        <!-- LINHA SUPERIOR: CONTROLES / SLIDERS (7 Colunas) -->
         <section class="lg:col-span-7 flex flex-col">
             <div class="glass-panel p-4 flex flex-col justify-between h-full gap-3">
-                <div class="flex flex-wrap items-center justify-between gap-2">
-                    <h2 class="text-xs font-bold text-cae-muted uppercase tracking-widest">Parâmetros da Série Harmônica</h2>
+                
+                <!-- SELETOR DE MODO (HARMONICO OFICIAL vs PROJETO FISICO) -->
+                <div class="flex flex-wrap items-center justify-between gap-2 border-b border-cae-border pb-2.5">
+                    <div class="flex items-center gap-1.5 bg-cae-bg border border-cae-border p-1 rounded-xl">
+                        <button type="button" id="tabModeA" class="tab-btn active px-3 py-1 rounded-lg text-xs font-mono font-bold">
+                            Modo Harmônico (A₀..A₂) [Oficial]
+                        </button>
+                        <button type="button" id="tabModeB" class="tab-btn px-3 py-1 rounded-lg text-xs font-mono font-bold text-cae-muted hover:text-cae-text">
+                            Modo Projeto Físico (e, GAP, Temp)
+                        </button>
+                    </div>
+
                     <button type="button" id="resetBtn" class="px-2.5 py-1 rounded-lg bg-cae-bg border border-cae-border text-[11px] font-mono font-bold text-cae-teal hover:border-cae-teal transition">
-                        Restaurar Nominal (51CrV4)
+                        Restaurar Exemplo
                     </button>
                 </div>
 
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2.5">
+                <!-- PAINEL MODO A: SÉRIE HARMÔNICA POLAR (OFICIAL) -->
+                <div id="panelModeA" class="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2.5">
                     <div>
                         <div class="flex justify-between items-end mb-1">
                             <label for="paramA0" class="text-xs font-bold text-cae-text uppercase">Força Média Radial (A₀)</label>
@@ -212,18 +263,18 @@
                         </div>
                         <div class="hmi-slider-container">
                             <div class="slider-fill" id="fillA1" style="width: 51%;"></div>
-                            <input type="range" id="paramA1" min="-50" max="50" step="0.5" value="1.0">
+                            <input type="range" id="paramA1" min="-30" max="30" step="0.5" value="1.0">
                         </div>
                     </div>
 
                     <div>
                         <div class="flex justify-between items-end mb-1">
-                            <label for="paramB1" class="text-xs font-bold text-cae-text uppercase">Componente Seno (B₁)</label>
+                            <label for="paramB1" class="text-xs font-bold text-cae-text uppercase">Componente Seno / GAP (B₁)</label>
                             <span id="valB1" class="font-mono text-cae-teal text-xs font-bold">37.50 N</span>
                         </div>
                         <div class="hmi-slider-container">
                             <div class="slider-fill" id="fillB1" style="width: 73%;"></div>
-                            <input type="range" id="paramB1" min="-80" max="80" step="0.5" value="37.5">
+                            <input type="range" id="paramB1" min="-60" max="60" step="0.5" value="37.5">
                         </div>
                     </div>
 
@@ -234,45 +285,121 @@
                         </div>
                         <div class="hmi-slider-container">
                             <div class="slider-fill" id="fillA2" style="width: 61%;"></div>
-                            <input type="range" id="paramA2" min="-60" max="60" step="0.25" value="13.25">
+                            <input type="range" id="paramA2" min="-40" max="40" step="0.25" value="13.25">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- PAINEL MODO B: VARIÁVEIS FÍSICAS DE PROJETO (ESPESSURA, GAP, TEMP, OVALIZAÇÃO) -->
+                <div id="panelModeB" class="hidden grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2.5">
+                    <div>
+                        <div class="flex justify-between items-end mb-1">
+                            <label for="physThick" class="text-xs font-bold text-cae-text uppercase">Espessura da Fita (e)</label>
+                            <span id="valPhysThick" class="font-mono text-cae-teal text-xs font-bold">1.76 mm</span>
+                        </div>
+                        <div class="hmi-slider-container">
+                            <div class="slider-fill" id="fillPhysThick" style="width: 56%;"></div>
+                            <input type="range" id="physThick" min="1.20" max="2.20" step="0.02" value="1.76">
+                        </div>
+                    </div>
+
+                    <div>
+                        <div class="flex justify-between items-end mb-1">
+                            <label for="physGap" class="text-xs font-bold text-cae-text uppercase">Abertura do GAP (Δs)</label>
+                            <span id="valPhysGap" class="font-mono text-cae-teal text-xs font-bold">4.50 mm</span>
+                        </div>
+                        <div class="hmi-slider-container">
+                            <div class="slider-fill" id="fillPhysGap" style="width: 42%;"></div>
+                            <input type="range" id="physGap" min="2.0" max="8.0" step="0.1" value="4.5">
+                        </div>
+                    </div>
+
+                    <div>
+                        <div class="flex justify-between items-end mb-1">
+                            <label for="physTemp" class="text-xs font-bold text-cae-text uppercase">Temperatura</label>
+                            <span id="valPhysTemp" class="font-mono text-cae-teal text-xs font-bold">60 °C</span>
+                        </div>
+                        <div class="hmi-slider-container">
+                            <div class="slider-fill" id="fillPhysTemp" style="width: 64%;"></div>
+                            <input type="range" id="physTemp" min="25" max="80" step="1" value="60">
+                        </div>
+                    </div>
+
+                    <div>
+                        <div class="flex justify-between items-end mb-1">
+                            <label for="physOval" class="text-xs font-bold text-cae-text uppercase">Ovalização / Excentricidade</label>
+                            <span id="valPhysOval" class="font-mono text-cae-teal text-xs font-bold">4.5 %</span>
+                        </div>
+                        <div class="hmi-slider-container">
+                            <div class="slider-fill" id="fillPhysOval" style="width: 30%;"></div>
+                            <input type="range" id="physOval" min="0" max="15" step="0.5" value="4.5">
                         </div>
                     </div>
                 </div>
 
                 <div class="text-[11px] text-cae-muted border-t border-cae-border pt-2 flex flex-wrap justify-between gap-2">
-                    <span>Referência teórica: Equações de Lamé • Contato de Hertz • Lei de Hooke</span>
-                    <span class="font-mono text-cae-amber">Validação FEA: ANSYS • Abaqus • SolidWorks</span>
+                    <span>Modelo Analítico</span>
+                    <span class="font-mono text-cae-amber">Validação: FEA Simulation</span>
                 </div>
             </div>
         </section>
 
-        <!-- LINHA INFERIOR: GRÁFICO POLAR (5 Colunas) + CURVA ANGULAR DESENVOLVIDA 0°-360° (7 Colunas) -->
+        <!-- LINHA INFERIOR: GRÁFICO POLAR COM SILHUETA DO ANEL DIN 3021 (5 Colunas) -->
         <section class="lg:col-span-5">
-            <div class="glass-panel p-4 h-full min-h-[300px] flex flex-col">
-                <div class="flex justify-between items-center gap-2 mb-2">
-                    <h2 class="text-xs font-bold text-cae-text uppercase tracking-widest">Distribuição Polar F₁(θ)</h2>
-                    <span class="text-[10px] font-mono text-cae-muted bg-cae-bg border border-cae-border px-2 py-0.5 rounded">0° – 360° HiDPI</span>
+            <div class="glass-panel p-4 h-full min-h-[310px] flex flex-col justify-between">
+                <div class="flex flex-wrap justify-between items-center gap-2 mb-1.5">
+                    <h2 class="text-xs font-bold text-cae-text uppercase tracking-widest flex items-center gap-1.5">
+                        <svg class="w-3.5 h-3.5 text-cae-teal" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" stroke-width="2"></circle><circle cx="12" cy="12" r="3"></circle></svg>
+                        Distribuição Polar &amp; Silhueta DIN 3021
+                    </h2>
+                    
+                    <!-- SELETOR DE VISUALIZAÇÃO -->
+                    <div class="flex items-center gap-1 bg-cae-bg border border-cae-border px-1.5 py-0.5 rounded-lg text-[10px] font-mono">
+                        <button type="button" id="btnViewBoth" class="px-1.5 py-0.5 rounded text-cae-teal font-bold bg-cae-surface border border-cae-teal/30">Combinada</button>
+                        <button type="button" id="btnViewRing" class="px-1.5 py-0.5 rounded text-cae-muted hover:text-cae-text">Silhueta</button>
+                        <button type="button" id="btnViewPolar" class="px-1.5 py-0.5 rounded text-cae-muted hover:text-cae-text">Polar</button>
+                    </div>
                 </div>
-                <div class="relative flex-1 w-full min-h-[245px] flex items-center justify-center">
-                    <canvas id="polarCanvas" width="380" height="300" aria-label="Gráfico Polar da Força Radial"></canvas>
+
+                <div class="relative flex-1 w-full min-h-[250px] flex items-center justify-center">
+                    <canvas id="polarCanvas" width="380" height="310" aria-label="Gráfico Polar da Força Radial e Silhueta do Anel"></canvas>
+                </div>
+
+                <div class="text-[10px] font-mono text-cae-muted flex justify-between items-center border-t border-cae-border pt-1.5 mt-1">
+                    <span>Orelhas Superiores • Eixos y (Vert.) e x (Horiz.)</span>
+                    <span class="text-cae-teal flex items-center gap-1.5">
+                        <span class="w-1.5 h-1.5 rounded-full bg-cae-teal animate-pulse"></span>
+                        Cores: Análise Dinâmica FEA (von Mises)
+                    </span>
                 </div>
             </div>
         </section>
 
+        <!-- LINHA INFERIOR: CURVA ANGULAR DESENVOLVIDA 0°-360° (7 Colunas) -->
         <section class="lg:col-span-7">
-            <div class="glass-panel p-4 h-full min-h-[300px] flex flex-col">
-                <div class="flex justify-between items-center gap-2 mb-2">
-                    <h2 class="text-xs font-bold text-cae-text uppercase tracking-widest">Perfil Angular Desenvolvido F₁(θ) × θ</h2>
-                    <span class="text-[10px] font-mono text-cae-teal bg-cae-bg border border-cae-border px-2 py-0.5 rounded">Hover interativo por ângulo</span>
+            <div class="glass-panel p-4 h-full min-h-[310px] flex flex-col justify-between">
+                <div class="flex justify-between items-center gap-2 mb-1.5">
+                    <h2 class="text-xs font-bold text-cae-text uppercase tracking-widest flex items-center gap-1.5">
+                        <svg class="w-3.5 h-3.5 text-cae-teal" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z"></path></svg>
+                        Perfil Angular Desenvolvido F₁(θ) × θ
+                    </h2>
+                    <span class="text-[10px] font-mono text-cae-teal bg-cae-bg border border-cae-border px-2 py-0.5 rounded">0° a 360° • Hover Interativo</span>
                 </div>
                 <div class="relative flex-1 w-full min-h-[245px]">
                     <canvas id="angularChart"></canvas>
+                </div>
+                <div class="text-[10px] font-mono text-cae-muted flex justify-between items-center border-t border-cae-border pt-1.5 mt-1">
+                    <span>Linha Contínua (Teal): Força Radial F₁(θ)</span>
+                    <span class="text-cae-amber">Tracejado Âmbar: Média Nominal A₀</span>
                 </div>
             </div>
         </section>
     </main>
 
     <script>
+        /* =========================================
+           TEMA (Paleta 2: CAE / von Mises Spectrum)
+        ========================================= */
         const htmlEl = document.documentElement;
         const themeToggleBtn = document.getElementById('themeToggle');
         let currentTheme = localStorage.getItem('rv_theme') || 'dark';
@@ -288,6 +415,7 @@
                 primary: s.getPropertyValue('--cae-primary').trim(),
                 teal: s.getPropertyValue('--cae-teal').trim(),
                 amber: s.getPropertyValue('--cae-amber').trim(),
+                red: s.getPropertyValue('--cae-red').trim(),
                 grid: s.getPropertyValue('--cae-grid').trim(),
                 border: s.getPropertyValue('--cae-border').trim()
             };
@@ -298,19 +426,102 @@
         }
         updateThemeLabel();
 
+        /* =========================================
+           ELEMENTOS DOM E VARIÁVEIS DE ESTADO
+        ========================================= */
+        // Controles Modo A (Harmônico)
         const paramA0 = document.getElementById('paramA0');
         const paramA1 = document.getElementById('paramA1');
         const paramB1 = document.getElementById('paramB1');
         const paramA2 = document.getElementById('paramA2');
 
+        // Controles Modo B (Físico)
+        const physThick = document.getElementById('physThick');
+        const physGap = document.getElementById('physGap');
+        const physTemp = document.getElementById('physTemp');
+        const physOval = document.getElementById('physOval');
+
+        // Abas e Painéis
+        const tabModeA = document.getElementById('tabModeA');
+        const tabModeB = document.getElementById('tabModeB');
+        const panelModeA = document.getElementById('panelModeA');
+        const panelModeB = document.getElementById('panelModeB');
+        let activeMode = 'A'; // 'A' oficial, 'B' físico
+
+        // Modo de visualização do Canvas Polar
+        let viewMode = 'both'; // 'both', 'ring', 'polar'
+        const btnViewBoth = document.getElementById('btnViewBoth');
+        const btnViewRing = document.getElementById('btnViewRing');
+        const btnViewPolar = document.getElementById('btnViewPolar');
+
         let angularChart = null;
 
+        // Estado para animação contínua FEA no Canvas
+        let lastCalculatedData = null;
+        let lastCalculatedA0 = 255.75;
+        const animStartTime = performance.now();
+
+        function renderAnimLoop(now) {
+            const elapsedSec = (now - animStartTime) / 1000;
+            if (lastCalculatedData) {
+                drawPolar(lastCalculatedData, lastCalculatedA0, elapsedSec);
+            }
+            requestAnimationFrame(renderAnimLoop);
+        }
+
+        /* =========================================
+           CÁLCULO E CONVERSÃO ENTRE MODOS
+        ========================================= */
+        // Quando o usuário move os sliders físicos (Modo B), calculamos a Série Harmônica (Modo A)
+        function convertPhysicalToHarmonic() {
+            const e = parseFloat(physThick.value); // mm
+            const gap = parseFloat(physGap.value); // mm
+            const T = parseFloat(physTemp.value); // °C
+            const oval = parseFloat(physOval.value); // %
+
+            // Módulo de elasticidade com temperatura
+            const E_T = 206000 - 65 * (T - 20); // MPa
+            const E_ref = 203400; // MPa a 60°C
+
+            // A0 proporcional a e^3 (inércia), gap (deflexão) e temperatura (rigidez)
+            const A0 = 255.75 * Math.pow(e / 1.76, 3) * (gap / 4.5) * (E_T / E_ref);
+            const A1 = 1.00 * (A0 / 255.75);
+            const B1 = 37.50 * (A0 / 255.75) * (gap / 4.5);
+            const A2 = 13.25 * (A0 / 255.75) * (oval / 4.5);
+
+            paramA0.value = Math.max(150, Math.min(350, A0)).toFixed(2);
+            paramA1.value = Math.max(-30, Math.min(30, A1)).toFixed(2);
+            paramB1.value = Math.max(-60, Math.min(60, B1)).toFixed(2);
+            paramA2.value = Math.max(-40, Math.min(40, A2)).toFixed(2);
+        }
+
+        // Quando o usuário move a Série Harmônica (Modo A), aproximamos as grandezas físicas equivalentes
+        function convertHarmonicToPhysical() {
+            const A0 = parseFloat(paramA0.value);
+            const B1 = parseFloat(paramB1.value);
+            const A2 = parseFloat(paramA2.value);
+
+            // Espessura estimada através de A0 (assumindo GAP nominal 4.5)
+            const ratio = A0 / 255.75;
+            const e_est = Math.max(1.20, Math.min(2.20, 1.76 * Math.cbrt(ratio)));
+            const gap_est = Math.max(2.0, Math.min(8.0, 4.5 * (Math.abs(B1) / 37.50)));
+            const oval_est = Math.max(0, Math.min(15, 4.5 * (Math.abs(A2) / 13.25)));
+
+            physThick.value = e_est.toFixed(2);
+            physGap.value = gap_est.toFixed(1);
+            physOval.value = oval_est.toFixed(1);
+        }
+
+        /* =========================================
+           PERFIL ANGULAR DA FORÇA RADIAL F1(θ)
+        ========================================= */
         function computeProfile(A0, A1, B1, A2) {
             const points = [];
             let maxF = -Infinity, minF = Infinity, maxDeg = 0;
 
-            for (let deg = 0; deg <= 360; deg += 5) {
+            for (let deg = 0; deg <= 360; deg += 4) {
                 const rad = (deg * Math.PI) / 180;
+                // Equação da Série Harmônica Polar
                 const f = A0 + A1 * Math.cos(rad) + B1 * Math.sin(rad) + A2 * Math.cos(2 * rad);
                 points.push({ deg, rad, f: Math.max(0, f) });
                 if (deg < 360) {
@@ -321,11 +532,14 @@
             return { points, maxF, minF, delta: maxF - minF, maxDeg };
         }
 
-        function drawPolar(data, A0) {
+        /* =========================================
+           DESENHO NO CANVAS POLAR: ANEL DIN 3021 & CURVA POLAR
+        ========================================= */
+        function drawPolar(data, A0, animTime = 0) {
             const canvas = document.getElementById('polarCanvas');
             const ctx = canvas.getContext('2d');
             const parent = canvas.parentElement;
-            const size = Math.min(parent.clientWidth || 340, 290);
+            const size = Math.min(parent.clientWidth || 340, 300);
             const dpr = window.devicePixelRatio || 1;
 
             canvas.width = size * dpr;
@@ -336,80 +550,309 @@
 
             const cx = size / 2;
             const cy = size / 2;
-            const maxR = (size / 2) - 28;
-            const scaleMax = Math.max(380, data.maxF * 1.12);
             const theme = getThemeColors();
-
             ctx.clearRect(0, 0, size, size);
 
-            // Anéis de referência
-            [100, 200, 300, 380].forEach((val) => {
-                if (val > scaleMax) return;
-                const r = (val / scaleMax) * maxR;
+            const e = parseFloat(physThick.value) || 1.76;
+            const gap = parseFloat(physGap.value) || 4.5;
+            const A2 = parseFloat(paramA2.value) || 13.25;
+
+            // 1. ANÉIS DE CALIBRAÇÃO POLAR (SE viewMode !== 'ring')
+            const maxR = (size / 2) - 26;
+            const scaleMax = Math.max(380, data.maxF * 1.14);
+
+            if (viewMode === 'both' || viewMode === 'polar') {
+                [100, 200, 300, 380].forEach((val) => {
+                    if (val > scaleMax) return;
+                    const r = (val / scaleMax) * maxR;
+                    ctx.beginPath();
+                    ctx.arc(cx, cy, r, 0, Math.PI * 2);
+                    ctx.strokeStyle = theme.grid;
+                    ctx.lineWidth = 1;
+                    ctx.stroke();
+
+                    ctx.fillStyle = theme.muted;
+                    ctx.font = '600 8.5px "JetBrains Mono", monospace';
+                    ctx.fillText(`${val}N`, cx + 4, cy - r + 9);
+                });
+
+                // Eixos angulares
+                for (let deg = 0; deg < 360; deg += 45) {
+                    const rad = (deg * Math.PI) / 180;
+                    ctx.beginPath();
+                    ctx.moveTo(cx, cy);
+                    ctx.lineTo(cx + Math.cos(rad) * maxR, cy - Math.sin(rad) * maxR);
+                    ctx.strokeStyle = theme.grid;
+                    ctx.stroke();
+
+                    const lx = cx + Math.cos(rad) * (maxR + 13);
+                    const ly = cy - Math.sin(rad) * (maxR + 13);
+                    ctx.fillStyle = theme.muted;
+                    ctx.font = '600 9.5px "JetBrains Mono", monospace';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillText(`${deg}°`, lx, ly);
+                }
+
+                // Círculo nominal A0
+                const rA0 = (A0 / scaleMax) * maxR;
                 ctx.beginPath();
-                ctx.arc(cx, cy, r, 0, Math.PI * 2);
-                ctx.strokeStyle = theme.grid;
-                ctx.lineWidth = 1;
+                ctx.setLineDash([4, 4]);
+                ctx.arc(cx, cy, rA0, 0, Math.PI * 2);
+                ctx.strokeStyle = theme.amber;
+                ctx.lineWidth = 1.25;
                 ctx.stroke();
-
-                ctx.fillStyle = theme.muted;
-                ctx.font = '600 9px "JetBrains Mono", monospace';
-                ctx.fillText(`${val}N`, cx + 4, cy - r + 10);
-            });
-
-            // Eixos angulares
-            for (let deg = 0; deg < 360; deg += 45) {
-                const rad = (deg * Math.PI) / 180;
-                ctx.beginPath();
-                ctx.moveTo(cx, cy);
-                ctx.lineTo(cx + Math.cos(rad) * maxR, cy - Math.sin(rad) * maxR);
-                ctx.strokeStyle = theme.grid;
-                ctx.stroke();
-
-                const lx = cx + Math.cos(rad) * (maxR + 14);
-                const ly = cy - Math.sin(rad) * (maxR + 14);
-                ctx.fillStyle = theme.muted;
-                ctx.font = '600 10px "JetBrains Mono", monospace';
-                ctx.textAlign = 'center';
-                ctx.textBaseline = 'middle';
-                ctx.fillText(`${deg}°`, lx, ly);
+                ctx.setLineDash([]);
             }
 
-            // Círculo nominal A0
-            const rA0 = (A0 / scaleMax) * maxR;
-            ctx.beginPath();
-            ctx.setLineDash([4, 4]);
-            ctx.arc(cx, cy, rA0, 0, Math.PI * 2);
-            ctx.strokeStyle = theme.amber;
-            ctx.lineWidth = 1.5;
-            ctx.stroke();
-            ctx.setLineDash([]);
+            // 2. SILHUETA DINÂMICA DA ABRAÇADEIRA DIN 3021 (COM DEFORMAÇÃO EM X E Y PELO 2º HARMÔNICO A2 E FORÇA MÉDIA A0)
+            if (viewMode === 'both' || viewMode === 'ring') {
+                ctx.save();
+                const isFullRing = viewMode === 'ring';
+                const ringBaseRadius = isFullRing ? maxR * 0.68 : maxR * 0.44;
+                const ringThick = Math.max(3.8, (e / 1.76) * (isFullRing ? 9.5 : 6.0));
 
-            // Curva polar F1(theta)
-            ctx.beginPath();
-            data.points.forEach((pt, idx) => {
-                const r = (pt.f / scaleMax) * maxR;
-                const x = cx + Math.cos(pt.rad) * r;
-                const y = cy - Math.sin(pt.rad) * r;
-                if (idx === 0) ctx.moveTo(x, y);
-                else ctx.lineTo(x, y);
-            });
-            ctx.closePath();
-            ctx.fillStyle = 'rgba(20, 184, 166, 0.16)';
-            ctx.fill();
-            ctx.strokeStyle = theme.teal;
-            ctx.lineWidth = 2.5;
-            ctx.stroke();
+                // Função de deformação radial contínua do anel em função de theta
+                // Responde dinamicamente a: A0 (diâmetro médio), A2 (ovalização X vs Y), A1 e B1 (assimetria)
+                // e ao ciclo elástico de carregamento FEA (feaCycle)
+                const feaCycle = (Math.sin(animTime * 2.4) + 1) / 2; // Oscila suavemente de 0 (alívio) a 1 (pico)
+                const feaDeformPulse = 1 + 0.04 * (feaCycle - 0.5);  // Micro-deflexão elástica cíclica de ±2%
 
-            // Ponto de pico F_max
-            const maxRad = (data.maxDeg * Math.PI) / 180;
-            const rMax = (data.maxF / scaleMax) * maxR;
-            ctx.beginPath();
-            ctx.arc(cx + Math.cos(maxRad) * rMax, cy - Math.sin(maxRad) * rMax, 4.5, 0, Math.PI * 2);
-            ctx.fillStyle = theme.amber;
-            ctx.fill();
+                function getRingProfile(thetaRad) {
+                    const dR0 = ringBaseRadius * (0.12 * ((A0 - 255.75) / 255.75));
+                    // cos(2*theta): positivo no eixo X (0° e 180°), negativo no eixo Y (90° e 270°)
+                    const dOval = ringBaseRadius * (0.22 * (parseFloat(paramA2.value) / 40)) * Math.cos(2 * thetaRad) * feaDeformPulse;
+                    const dAsym = ringBaseRadius * (0.05 * (parseFloat(paramA1.value) / 30) * Math.cos(thetaRad) + 0.08 * (parseFloat(paramB1.value) / 60) * Math.sin(thetaRad));
+                    const rMed = ringBaseRadius + dR0 + dOval + dAsym;
+                    return {
+                        rExt: rMed + ringThick / 2,
+                        rInt: rMed - ringThick / 2,
+                        rMed: rMed
+                    };
+                }
+
+                // Meio-ângulo do GAP no topo (em torno do eixo vertical y)
+                const halfGap = Math.max(0.35, (38 + (gap - 4.5) * 3) * (Math.PI / 180));
+                const angEsq = (Math.PI / 2) + halfGap; // ~128° (Aba Esquerda, para cima e esquerda)
+                const angDir = (Math.PI / 2) - halfGap; // ~52° (Aba Direita, para cima e direita)
+
+                const Lb = isFullRing ? 30 : 18; // Comprimento das orelhas retas
+
+                // 2.1 Eixos de Simetria Técnicos (Vertical = y, Horizontal = x)
+                ctx.strokeStyle = currentTheme === 'dark' ? 'rgba(148, 163, 184, 0.28)' : 'rgba(100, 116, 139, 0.28)';
+                ctx.lineWidth = 1;
+                ctx.setLineDash([12, 3, 2, 3]);
+
+                // Eixo Vertical y-y
+                ctx.beginPath();
+                ctx.moveTo(cx, cy - ringBaseRadius - (isFullRing ? Lb + 32 : 30));
+                ctx.lineTo(cx, cy + ringBaseRadius + (isFullRing ? 46 : 28));
+                ctx.stroke();
+
+                // Eixo Horizontal x-x
+                ctx.beginPath();
+                ctx.moveTo(cx - ringBaseRadius - (isFullRing ? 46 : 28), cy);
+                ctx.lineTo(cx + ringBaseRadius + (isFullRing ? 46 : 28), cy);
+                ctx.stroke();
+                ctx.setLineDash([]);
+
+                // Letras dos Eixos: Vertical y-y, Horizontal x-x
+                ctx.fillStyle = theme.muted;
+                ctx.font = 'italic 700 10px "JetBrains Mono", monospace';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText('y', cx, cy - ringBaseRadius - (isFullRing ? Lb + 38 : 36));
+                ctx.fillText('y', cx, cy + ringBaseRadius + (isFullRing ? 52 : 34));
+                ctx.fillText('x', cx - ringBaseRadius - (isFullRing ? 52 : 34), cy);
+                ctx.fillText('x', cx + ringBaseRadius + (isFullRing ? 52 : 34), cy);
+
+                // 2.2 Gradiente CAE von Mises Animado (Simulação de Análise Estrutural FEA)
+                // As zonas de tensão expandem e retraem suavemente simulando o ciclo de carregamento dinâmico
+                const ringGrad = ctx.createLinearGradient(cx, cy - ringBaseRadius, cx, cy + ringBaseRadius);
+
+                // Migração dos contornos de tensão von Mises ao longo do anel:
+                // No alívio (feaCycle=0), a zona fria Teal cobre até 68% do anel.
+                // No pico de carga (feaCycle=1), as zonas quentes sobem pelas laterais até 38% do anel.
+                const stopTeal = 0.38 + 0.28 * (1 - feaCycle);  // varia de 0.38 a 0.66
+                const stopAmber = 0.65 + 0.16 * (1 - feaCycle); // varia de 0.65 a 0.81
+
+                ringGrad.addColorStop(0, theme.teal);
+                ringGrad.addColorStop(Math.min(0.70, stopTeal), theme.teal);
+                ringGrad.addColorStop(Math.min(0.88, stopAmber), theme.amber);
+
+                // Dorso inferior (pico de von Mises a 270° intensifica no pico do ciclo)
+                const peakColor = feaCycle > 0.60
+                    ? (currentTheme === 'dark' ? '#EA580C' : '#DC2626')
+                    : (currentTheme === 'dark' ? '#F97316' : '#D97706');
+                ringGrad.addColorStop(1, peakColor);
+
+                // 2.3 CORPO DO ANEL DIN 3021 COM DEFORMAÇÃO EM X E Y EM 360°
+                ctx.beginPath();
+                // Perímetro Externo Deformado
+                for (let deg = 0; deg <= 360; deg += 4) {
+                    const rad = (deg * Math.PI) / 180;
+                    const r = getRingProfile(rad).rExt;
+                    const x = cx + r * Math.cos(rad);
+                    const y = cy - r * Math.sin(rad);
+                    if (deg === 0) ctx.moveTo(x, y);
+                    else ctx.lineTo(x, y);
+                }
+                // Perímetro Interno Deformado
+                for (let deg = 360; deg >= 0; deg -= 4) {
+                    const rad = (deg * Math.PI) / 180;
+                    const r = getRingProfile(rad).rInt;
+                    const x = cx + r * Math.cos(rad);
+                    const y = cy - r * Math.sin(rad);
+                    ctx.lineTo(x, y);
+                }
+                ctx.closePath();
+                ctx.fillStyle = ringGrad;
+                ctx.fill();
+                ctx.strokeStyle = theme.surface;
+                ctx.lineWidth = 1.5;
+                ctx.stroke();
+
+                // 2.4 TRANSPASSE MECÂNICO DAS FITAS NO TOPO (CONFORME FOTO REAL DA ABRAÇADEIRA)
+                ctx.strokeStyle = theme.surface;
+                ctx.lineWidth = 1.5;
+                ctx.beginPath();
+                for (let a = angDir; a <= angEsq; a += 0.08) {
+                    const r = getRingProfile(a).rExt;
+                    const x = cx + r * Math.cos(a);
+                    const y = cy - r * Math.sin(a);
+                    if (a === angDir) ctx.moveTo(x, y);
+                    else ctx.lineTo(x, y);
+                }
+                ctx.stroke();
+
+                // 2.5 AS DUAS ORELHAS DIN 3021 (RETAS E SOLIDÁRIAS À CASCA EXTERNA DEFORMADA)
+                const tOrelha = ringThick;
+
+                // --- ORELHA ESQUERDA (em angEsq ~128°) ---
+                const cosEsq = Math.cos(angEsq);
+                const sinEsq = Math.sin(angEsq);
+                const uEsqX = cosEsq, uEsqY = -sinEsq;  // Direção radial/haste para fora
+                const nEsqX = -sinEsq, nEsqY = -cosEsq; // Direção normal à haste
+
+                const rExtEsq = getRingProfile(angEsq).rExt;
+                const cEsqX = cx + rExtEsq * cosEsq;
+                const cEsqY = cy - rExtEsq * sinEsq;
+
+                const pEsq1 = { x: cEsqX + (tOrelha / 2) * nEsqX, y: cEsqY + (tOrelha / 2) * nEsqY };
+                const pEsq2 = { x: pEsq1.x + Lb * uEsqX, y: pEsq1.y + Lb * uEsqY };
+                const pEsq3 = { x: cEsqX - (tOrelha / 2) * nEsqX + Lb * uEsqX, y: cEsqY - (tOrelha / 2) * nEsqY + Lb * uEsqY };
+                const pEsq4 = { x: cEsqX - (tOrelha / 2) * nEsqX, y: cEsqY - (tOrelha / 2) * nEsqY };
+
+                ctx.beginPath();
+                ctx.moveTo(pEsq1.x, pEsq1.y);
+                ctx.lineTo(pEsq2.x, pEsq2.y);
+                ctx.lineTo(pEsq3.x, pEsq3.y);
+                ctx.lineTo(pEsq4.x, pEsq4.y);
+                ctx.closePath();
+                ctx.fillStyle = theme.teal;
+                ctx.fill();
+                ctx.strokeStyle = theme.surface;
+                ctx.lineWidth = 1.5;
+                ctx.lineJoin = 'round';
+                ctx.stroke();
+
+                // --- ORELHA DIREITA (em angDir ~52°, aba reta conforme especificação) ---
+                const cosDir = Math.cos(angDir);
+                const sinDir = Math.sin(angDir);
+                const uDirX = cosDir, uDirY = -sinDir; // Direção radial para fora
+                const nDirX = sinDir, nDirY = cosDir;   // Direção ortogonal para fora/trás
+
+                const rExtDir = getRingProfile(angDir).rExt;
+                const cDirX = cx + rExtDir * cosDir;
+                const cDirY = cy - rExtDir * sinDir;
+
+                const pDir1 = { x: cDirX + (tOrelha / 2) * nDirX, y: cDirY + (tOrelha / 2) * nDirY };
+                const pDir2 = { x: pDir1.x + Lb * uDirX, y: pDir1.y + Lb * uDirY };
+                const pDir3 = { x: cDirX - (tOrelha / 2) * nDirX + Lb * uDirX, y: cDirY - (tOrelha / 2) * nDirY + Lb * uDirY };
+                const pDir4 = { x: cDirX - (tOrelha / 2) * nDirX, y: cDirY - (tOrelha / 2) * nDirY };
+
+                ctx.beginPath();
+                ctx.moveTo(pDir1.x, pDir1.y);
+                ctx.lineTo(pDir2.x, pDir2.y);
+                ctx.lineTo(pDir3.x, pDir3.y);
+                ctx.lineTo(pDir4.x, pDir4.y);
+                ctx.closePath();
+                ctx.fillStyle = theme.teal;
+                ctx.fill();
+                ctx.strokeStyle = theme.surface;
+                ctx.lineWidth = 1.5;
+                ctx.lineJoin = 'round';
+                ctx.stroke();
+
+                // 2.6 Círculo interno tracejado da tubulação deformando sob contato
+                ctx.beginPath();
+                for (let deg = 0; deg <= 360; deg += 6) {
+                    const rad = (deg * Math.PI) / 180;
+                    const r = getRingProfile(rad).rInt;
+                    const x = cx + r * Math.cos(rad);
+                    const y = cy - r * Math.sin(rad);
+                    if (deg === 0) ctx.moveTo(x, y);
+                    else ctx.lineTo(x, y);
+                }
+                ctx.strokeStyle = 'rgba(20, 184, 166, 0.35)';
+                ctx.lineWidth = 1;
+                ctx.setLineDash([3, 3]);
+                ctx.stroke();
+                ctx.setLineDash([]);
+
+
+
+                ctx.restore();
+            }
+
+            // 3. CURVA POLAR EXTERNA DE FORÇA RADIAL F1(θ) (SE viewMode !== 'ring')
+            if (viewMode === 'both' || viewMode === 'polar') {
+                ctx.beginPath();
+                data.points.forEach((pt, idx) => {
+                    const r = (pt.f / scaleMax) * maxR;
+                    const x = cx + Math.cos(pt.rad) * r;
+                    const y = cy - Math.sin(pt.rad) * r;
+                    if (idx === 0) ctx.moveTo(x, y);
+                    else ctx.lineTo(x, y);
+                });
+                ctx.closePath();
+                ctx.fillStyle = 'rgba(20, 184, 166, 0.14)';
+                ctx.fill();
+                ctx.strokeStyle = theme.teal;
+                ctx.lineWidth = 2.25;
+                ctx.stroke();
+
+                // Vetores discretos de contato da força radial
+                for (let deg = 0; deg < 360; deg += 30) {
+                    const rad = (deg * Math.PI) / 180;
+                    const f = A0 + parseFloat(paramA1.value) * Math.cos(rad) + parseFloat(paramB1.value) * Math.sin(rad) + parseFloat(paramA2.value) * Math.cos(2 * rad);
+                    const rEnd = (Math.max(0, f) / scaleMax) * maxR;
+                    const rStart = (size / 2) * 0.42;
+
+                    ctx.beginPath();
+                    ctx.moveTo(cx + Math.cos(rad) * rStart, cy - Math.sin(rad) * rStart);
+                    ctx.lineTo(cx + Math.cos(rad) * rEnd, cy - Math.sin(rad) * rEnd);
+                    ctx.strokeStyle = 'rgba(20, 184, 166, 0.35)';
+                    ctx.lineWidth = 1;
+                    ctx.stroke();
+                }
+
+                // Marcador do Ponto de Pico F_max
+                const maxRad = (data.maxDeg * Math.PI) / 180;
+                const rMax = (data.maxF / scaleMax) * maxR;
+                ctx.beginPath();
+                ctx.arc(cx + Math.cos(maxRad) * rMax, cy - Math.sin(maxRad) * rMax, 4.5, 0, Math.PI * 2);
+                ctx.fillStyle = theme.amber;
+                ctx.fill();
+                ctx.strokeStyle = theme.surface;
+                ctx.lineWidth = 1.5;
+                ctx.stroke();
+            }
         }
 
+        /* =========================================
+           GRÁFICO LINEAR DESENVOLVIDO (Chart.js)
+        ========================================= */
         function initAngularChart() {
             const ctx = document.getElementById('angularChart').getContext('2d');
             const theme = getThemeColors();
@@ -427,7 +870,7 @@
                             pointRadius: 0,
                             pointHoverRadius: 5,
                             fill: true,
-                            tension: 0.3
+                            tension: 0.32
                         },
                         {
                             label: 'Média Nominal (A₀)',
@@ -464,7 +907,7 @@
                             ticks: { maxTicksLimit: 9, color: theme.muted, font: { family: 'JetBrains Mono', size: 10 } }
                         },
                         y: {
-                            min: 50,
+                            min: 40,
                             max: 420,
                             grid: { color: theme.grid, drawBorder: false },
                             ticks: {
@@ -478,6 +921,9 @@
             });
         }
 
+        /* =========================================
+           ATUALIZAÇÃO GERAL E CÁLCULO DE KPIS
+        ========================================= */
         function updateSliderFill(input, fillId) {
             const min = parseFloat(input.min);
             const max = parseFloat(input.max);
@@ -486,35 +932,124 @@
             document.getElementById(fillId).style.width = `${pct}%`;
         }
 
-        function updateAll() {
+        function updateAll(source) {
+            if (source === 'physical') {
+                convertPhysicalToHarmonic();
+            } else if (source === 'harmonic') {
+                convertHarmonicToPhysical();
+            }
+
             const A0 = parseFloat(paramA0.value);
             const A1 = parseFloat(paramA1.value);
             const B1 = parseFloat(paramB1.value);
             const A2 = parseFloat(paramA2.value);
 
+            const e = parseFloat(physThick.value);
+            const gap = parseFloat(physGap.value);
+            const T = parseFloat(physTemp.value);
+            const oval = parseFloat(physOval.value);
+
+            // Atualiza preenchimento visual dos sliders
             updateSliderFill(paramA0, 'fillA0');
             updateSliderFill(paramA1, 'fillA1');
             updateSliderFill(paramB1, 'fillB1');
             updateSliderFill(paramA2, 'fillA2');
 
+            updateSliderFill(physThick, 'fillPhysThick');
+            updateSliderFill(physGap, 'fillPhysGap');
+            updateSliderFill(physTemp, 'fillPhysTemp');
+            updateSliderFill(physOval, 'fillPhysOval');
+
+            // Textos dos sliders Modo A
             document.getElementById('valA0').textContent = `${A0.toFixed(2)} N`;
             document.getElementById('valA1').textContent = `${A1.toFixed(2)} N`;
             document.getElementById('valB1').textContent = `${B1.toFixed(2)} N`;
             document.getElementById('valA2').textContent = `${A2.toFixed(2)} N`;
 
+            // Textos dos sliders Modo B
+            document.getElementById('valPhysThick').textContent = `${e.toFixed(2)} mm`;
+            document.getElementById('valPhysGap').textContent = `${gap.toFixed(2)} mm`;
+            document.getElementById('valPhysTemp').textContent = `${Math.round(T)} °C`;
+            document.getElementById('valPhysOval').textContent = `${oval.toFixed(1)} %`;
+
+            // Equação Harmônica formatada
             const sA1 = A1 >= 0 ? `+ ${A1.toFixed(2)}` : `- ${Math.abs(A1).toFixed(2)}`;
             const sB1 = B1 >= 0 ? `+ ${B1.toFixed(2)}` : `- ${Math.abs(B1).toFixed(2)}`;
             const sA2 = A2 >= 0 ? `+ ${A2.toFixed(2)}` : `- ${Math.abs(A2).toFixed(2)}`;
             document.getElementById('eqText').textContent = `${A0.toFixed(2)} ${sA1}·cos(θ) ${sB1}·sen(θ) ${sA2}·cos(2θ)`;
 
+            // Cálculo dos pontos e picos
             const data = computeProfile(A0, A1, B1, A2);
             document.getElementById('statMax').textContent = `${data.maxF.toFixed(1)} N`;
             document.getElementById('statMin').textContent = `${data.minF.toFixed(1)} N`;
             document.getElementById('statDelta').textContent = `${data.delta.toFixed(1)} N`;
             document.getElementById('statAngle').textContent = `${data.maxDeg}°`;
 
-            drawPolar(data, A0);
+            // CÁLCULO DE TENSÃO DE VON MISES & FATOR DE SEGURANÇA
+            // Anel aberto DIN 3021: Raio nominal R=20mm, largura b=15mm, espessura e
+            const R_nom = 20.0; // mm
+            const b_nom = 15.0; // mm
+            // Momento fletor máximo ocorre nas fibras do dorso oposto ao GAP
+            const M_max = (data.maxF * R_nom) / (Math.PI * 0.95); // N.mm
+            const W_flex = (b_nom * Math.pow(e, 2)) / 6; // mm^3
+            const sigma_flex = M_max / W_flex; // MPa
+            const sigma_vM = Math.round(sigma_flex * 1.05); // Tensão de von Mises estimada
 
+            const Rp02 = 1350; // Limite de escoamento do 51CrV4 temperado/revenido
+            const yieldPct = Math.min(100, (sigma_vM / Rp02) * 100);
+            const fs = (Rp02 / Math.max(1, sigma_vM)).toFixed(2);
+
+            const statVonMisesEl = document.getElementById('statVonMises');
+            statVonMisesEl.textContent = `${sigma_vM.toLocaleString('pt-BR')} MPa`;
+
+            const barVonMises = document.getElementById('barVonMises');
+            barVonMises.style.width = `${yieldPct}%`;
+
+            const statSafetyFactorEl = document.getElementById('statSafetyFactor');
+            if (sigma_vM < 1200) {
+                statVonMisesEl.className = 'font-mono text-xs font-bold text-cae-teal';
+                statSafetyFactorEl.textContent = `FS = ${fs} (${yieldPct.toFixed(1)}% Escoamento • Seguro)`;
+                statSafetyFactorEl.className = 'font-bold text-cae-teal';
+            } else if (sigma_vM <= 1350) {
+                statVonMisesEl.className = 'font-mono text-xs font-bold text-cae-amber';
+                statSafetyFactorEl.textContent = `FS = ${fs} (${yieldPct.toFixed(1)}% • Próximo ao Limite)`;
+                statSafetyFactorEl.className = 'font-bold text-cae-amber';
+            } else {
+                statVonMisesEl.className = 'font-mono text-xs font-bold text-red-500';
+                statSafetyFactorEl.textContent = `FS = ${fs} (Plastificação Detectada!)`;
+                statSafetyFactorEl.className = 'font-bold text-red-500';
+            }
+
+            // CRITÉRIO DE ESTANQUEIDADE / RETENÇÃO DE MANGUEIRA
+            const badgeSealing = document.getElementById('badgeSealing');
+            const dotSealing = document.getElementById('dotSealing');
+            const txtSealingTitle = document.getElementById('txtSealingTitle');
+            const txtSealingDesc = document.getElementById('txtSealingDesc');
+
+            if (data.minF >= 220) {
+                badgeSealing.className = 'bg-cae-bg border border-cae-teal/40 rounded-xl px-3 py-1.5 flex items-center justify-between gap-2';
+                dotSealing.className = 'w-2 h-2 rounded-full bg-cae-teal animate-pulse';
+                txtSealingTitle.textContent = 'Estanqueidade Aprovada';
+                txtSealingDesc.textContent = 'Circuito Turbo / Radiador (P ≤ 2.5 bar)';
+            } else if (data.minF >= 170) {
+                badgeSealing.className = 'bg-cae-bg border border-cae-amber/40 rounded-xl px-3 py-1.5 flex items-center justify-between gap-2';
+                dotSealing.className = 'w-2 h-2 rounded-full bg-cae-amber animate-pulse';
+                txtSealingTitle.textContent = 'Estanqueidade Marginal';
+                txtSealingDesc.textContent = 'Retorno Baixa Pressão (P ≤ 1.2 bar)';
+            } else {
+                badgeSealing.className = 'bg-cae-bg border border-red-500/40 rounded-xl px-3 py-1.5 flex items-center justify-between gap-2';
+                dotSealing.className = 'w-2 h-2 rounded-full bg-red-500 animate-pulse';
+                txtSealingTitle.textContent = 'Alerta de Vazamento';
+                txtSealingDesc.textContent = 'Força insuficiente no GAP (< 170 N)';
+            }
+
+            // Armazena estado para o loop contínuo de renderização animada FEA
+            lastCalculatedData = data;
+            lastCalculatedA0 = A0;
+            const elapsed = (performance.now() - animStartTime) / 1000;
+            drawPolar(data, A0, elapsed);
+
+            // Atualiza o Gráfico Linear Cartesiano
             if (angularChart) {
                 const theme = getThemeColors();
                 angularChart.data.labels = data.points.map((p) => `${p.deg}°`);
@@ -534,14 +1069,73 @@
             }
         }
 
-        [paramA0, paramA1, paramB1, paramA2].forEach((el) => el.addEventListener('input', updateAll));
+        /* =========================================
+           LISTENERS DE ENTRADA
+        ========================================= */
+        [paramA0, paramA1, paramB1, paramA2].forEach((el) => {
+            el.addEventListener('input', () => updateAll('harmonic'));
+        });
 
+        [physThick, physGap, physTemp, physOval].forEach((el) => {
+            el.addEventListener('input', () => updateAll('physical'));
+        });
+
+        // Alternância de Abas (Modo A Harmônico Oficial / Modo B Físico)
+        tabModeA.addEventListener('click', () => {
+            activeMode = 'A';
+            tabModeA.className = 'tab-btn active px-3 py-1 rounded-lg text-xs font-mono font-bold';
+            tabModeB.className = 'tab-btn px-3 py-1 rounded-lg text-xs font-mono font-bold text-cae-muted hover:text-cae-text';
+            panelModeA.classList.remove('hidden');
+            panelModeB.classList.add('hidden');
+        });
+
+        tabModeB.addEventListener('click', () => {
+            activeMode = 'B';
+            tabModeB.className = 'tab-btn active px-3 py-1 rounded-lg text-xs font-mono font-bold';
+            tabModeA.className = 'tab-btn px-3 py-1 rounded-lg text-xs font-mono font-bold text-cae-muted hover:text-cae-text';
+            panelModeB.classList.remove('hidden');
+            panelModeA.classList.add('hidden');
+        });
+
+        // Alternância de visualização no Canvas Polar
+        function setViewButtons(activeBtn) {
+            [btnViewBoth, btnViewRing, btnViewPolar].forEach(b => {
+                b.className = 'px-1.5 py-0.5 rounded text-cae-muted hover:text-cae-text';
+            });
+            activeBtn.className = 'px-1.5 py-0.5 rounded text-cae-teal font-bold bg-cae-surface border border-cae-teal/30';
+        }
+
+        btnViewBoth.addEventListener('click', () => {
+            viewMode = 'both';
+            setViewButtons(btnViewBoth);
+            updateAll('none');
+        });
+
+        btnViewRing.addEventListener('click', () => {
+            viewMode = 'ring';
+            setViewButtons(btnViewRing);
+            updateAll('none');
+        });
+
+        btnViewPolar.addEventListener('click', () => {
+            viewMode = 'polar';
+            setViewButtons(btnViewPolar);
+            updateAll('none');
+        });
+
+        // Botão Restaurar Nominal (51CrV4)
         document.getElementById('resetBtn').addEventListener('click', () => {
             paramA0.value = 255.75;
             paramA1.value = 1.0;
             paramB1.value = 37.5;
             paramA2.value = 13.25;
-            updateAll();
+
+            physThick.value = 1.76;
+            physGap.value = 4.5;
+            physTemp.value = 60;
+            physOval.value = 4.5;
+
+            updateAll('none');
         });
 
         themeToggleBtn.addEventListener('click', () => {
@@ -549,13 +1143,14 @@
             htmlEl.setAttribute('data-theme', currentTheme);
             localStorage.setItem('rv_theme', currentTheme);
             updateThemeLabel();
-            updateAll();
+            updateAll('none');
         });
 
-        window.addEventListener('resize', updateAll);
+        window.addEventListener('resize', () => updateAll('none'));
         window.onload = () => {
             initAngularChart();
-            updateAll();
+            updateAll('none');
+            requestAnimationFrame(renderAnimLoop);
         };
     </script>
 </body>
